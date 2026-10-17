@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --red: #e60000;
+  --red-hot: #ff0033;
+  --cyan: #00e5ff;
+  --amber: #ffb000;
+  color-scheme: dark;
+}
+
+html {
+  background: #000;
+  scrollbar-color: var(--red) #0a0a0a;
+  scrollbar-width: thin;
+}
+
+body {
+  @apply bg-void text-neutral-300 font-mono antialiased;
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--red-hot);
+  color: #000;
+}
+
+/* ---------- LED-bar scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+  border-left: 1px solid #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+  background: repeating-linear-gradient(to bottom, var(--red-hot) 0 6px, #3a0008 6px 8px);
+  box-shadow: 0 0 8px rgba(255, 0, 51, 0.8);
+  border: 2px solid #050505;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: repeating-linear-gradient(to bottom, #ff3355 0 6px, #500010 6px 8px);
+}
+
+/* ---------- CRT scanlines + vignette (global overlay) ---------- */
+.crt-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background:
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  mix-blend-mode: overlay;
+}
+
+.crt-flicker {
+  animation: crtFlicker 6s infinite;
+}
+@keyframes crtFlicker {
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: 0.86; }
+  94% { opacity: 1; }
+  96% { opacity: 0.92; }
+  97% { opacity: 1; }
+}
+
+/* ---------- glitch text (RGB split, brief bursts) ---------- */
+.glitch {
+  position: relative;
+  display: inline-block;
+}
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+.glitch::before {
+  color: var(--cyan);
+  animation: glitchA 5s infinite steps(1);
+}
+.glitch::after {
+  color: var(--red-hot);
+  animation: glitchB 5s infinite steps(1);
+}
+@keyframes glitchA {
+  0%, 88%, 100% { opacity: 0; transform: none; clip-path: none; }
+  89% { opacity: 0.85; transform: translate(-3px, -1px); clip-path: inset(10% 0 60% 0); }
+  91% { opacity: 0.85; transform: translate(2px, 1px); clip-path: inset(55% 0 20% 0); }
+  93% { opacity: 0.85; transform: translate(-2px, 0); clip-path: inset(30% 0 45% 0); }
+  95% { opacity: 0; }
+}
+@keyframes glitchB {
+  0%, 88%, 100% { opacity: 0; transform: none; clip-path: none; }
+  89% { opacity: 0.85; transform: translate(3px, 1px); clip-path: inset(65% 0 5% 0); }
+  91% { opacity: 0.85; transform: translate(-2px, -1px); clip-path: inset(5% 0 70% 0); }
+  94% { opacity: 0.85; transform: translate(2px, 0); clip-path: inset(40% 0 35% 0); }
+  95% { opacity: 0; }
+}
+.glitch-hover:hover::before,
+.glitch-hover:hover::after {
+  animation-duration: 0.6s;
+}
+
+/* ---------- chromatic aberration on hover ---------- */
+.aberrate {
+  transition: text-shadow 0.15s ease, transform 0.15s ease;
+}
+.aberrate:hover {
+  text-shadow: -2px 0 var(--cyan), 2px 0 var(--red-hot);
+}
+
+/* ---------- neon components ---------- */
+@layer components {
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm uppercase tracking-[0.18em]
+      font-display font-bold transition-all duration-150 select-none disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-crimson text-black shadow-neon hover:bg-blood hover:shadow-neon-lg;
+  }
+  .btn-primary:hover {
+    text-shadow: -1.5px 0 var(--cyan), 1.5px 0 #fff;
+  }
+  .btn-ghost {
+    @apply btn border border-crimson/70 text-blood hover:bg-crimson/10 hover:shadow-neon;
+  }
+  .btn-ghost:hover {
+    text-shadow: -1.5px 0 var(--cyan), 1.5px 0 var(--red-hot);
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs tracking-[0.12em];
+  }
+
+  .card {
+    @apply relative border border-line bg-ink/90 backdrop-blur-sm transition-all duration-200;
+  }
+  .card-hover {
+    @apply hover:border-crimson/70 hover:shadow-neon hover:-translate-y-0.5;
+  }
+  .card-hover:hover .aberrate-child {
+    text-shadow: -2px 0 var(--cyan), 2px 0 var(--red-hot);
+  }
+
+  .corner-brackets::before,
+  .corner-brackets::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--red);
+    pointer-events: none;
+  }
+  .corner-brackets::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+  }
+  .corner-brackets::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 2px solid;
+    border-right: 2px solid;
+  }
+
+  .tag {
+    @apply inline-flex items-center border border-edge bg-black/60 px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted;
+  }
+  .label {
+    @apply block text-[11px] uppercase tracking-[0.2em] text-muted mb-1.5;
+  }
+  .input {
+    @apply w-full border border-edge bg-black px-3 py-2.5 text-sm text-neutral-200 placeholder:text-dim
+      outline-none transition focus:border-crimson focus:shadow-neon;
+  }
+  .eyebrow {
+    @apply text-[11px] uppercase tracking-[0.35em] text-blood;
+  }
+  .h-display {
+    @apply font-display font-black uppercase tracking-wider text-white;
+  }
+  .container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .glow-text {
+    text-shadow: 0 0 12px rgba(255, 0, 51, 0.7);
+  }
+}
+
+/* ---------- boot overlay (hidden instantly for returning visitors via inline script) ---------- */
+html[data-booted] .boot-overlay {
+  display: none !important;
+}
+
+/* ---------- markdown ---------- */
+.prose-x {
+  @apply text-neutral-300 leading-relaxed;
+}
+.prose-x h1, .prose-x h2, .prose-x h3 {
+  @apply font-display font-bold uppercase tracking-wide text-white mt-8 mb-3;
+}
+.prose-x h1 { @apply text-2xl; }
+.prose-x h2 { @apply text-xl; }
+.prose-x h3 { @apply text-lg text-blood; }
+.prose-x p { @apply my-3; }
+.prose-x a { @apply text-blood underline decoration-crimson/50 underline-offset-4 hover:text-white; }
+.prose-x ul { @apply my-3 list-none pl-0; }
+.prose-x ul > li { @apply relative pl-5 my-1; }
+.prose-x ul > li::before { content: "▸"; @apply absolute left-0 text-crimson; }
+.prose-x ol { @apply my-3 list-decimal pl-6; }
+.prose-x code { @apply bg-panel border border-line px-1.5 py-0.5 text-[0.85em] text-amber; }
+.prose-x pre { @apply my-4 overflow-x-auto border border-line bg-panel p-4; }
+.prose-x pre code { @apply border-0 bg-transparent p-0 text-neutral-200; }
+.prose-x blockquote { @apply border-l-2 border-crimson pl-4 italic text-muted my-4; }
+.prose-x table { @apply my-4 w-full text-sm; }
+.prose-x th, .prose-x td { @apply border border-line px-3 py-2 text-left; }
+.prose-x th { @apply bg-panel text-white; }
+.prose-x img { @apply my-4 border border-line; }
+.prose-x hr { @apply my-8 border-line; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .glitch::before, .glitch::after { display: none; }
+}
