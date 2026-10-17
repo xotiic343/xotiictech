@@ -1,5 +1,10 @@
 const isDev = process.env.NODE_ENV !== "production";
 
+const backendUrl = (
+  process.env.BACKEND_URL ||
+  (process.env.BACKEND_HOSTPORT ? `http://${process.env.BACKEND_HOSTPORT}` : "http://localhost:8000")
+).replace(/\/$/, "");
+
 const csp = [
   "default-src 'self'",
   // Next.js injects small inline bootstrap scripts; the boot-sequence guard is inline too.
@@ -20,6 +25,10 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
+  // Same-origin proxy: browser → xotiictech.com/api/* → FastAPI (keeps auth cookies first-party).
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+  },
   async headers() {
     return [
       {
