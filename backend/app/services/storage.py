@@ -36,7 +36,8 @@ def _s3():
         region_name=settings.s3_region,
         aws_access_key_id=settings.s3_access_key_id,
         aws_secret_access_key=settings.s3_secret_access_key,
-        config=Config(signature_version="s3v4"),
+        # Path-style addressing works with Supabase Storage, Cloudflare R2 and Backblaze B2 alike.
+        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
     )
 
 
