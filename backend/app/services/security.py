@@ -183,11 +183,24 @@ def verified_count(db: Session, guild_id: str) -> int:
     return db.scalar(select(func.count()).select_from(SecurityMember).where(SecurityMember.guild_id == guild_id, SecurityMember.revoked.is_(False))) or 0
 
 
-def create_pull(db: Session, source: str, target: str, requested_by: str) -> PullJob:
+MAX_PULL = 1_000_000
+
+
+def create_pull(db: Session, source: str, target: str, requested_by: str, max_members: int | None = None) -> PullJob:
+    """Queue a pull. `max_members` caps how many consenting members are pulled (None = all of them)."""
     active = db.scalar(select(PullJob).where(PullJob.source_guild == source, PullJob.target_guild == target, PullJob.status.in_(("queued", "running"))))
     if active:
         return active
-    job = PullJob(source_guild=source, target_guild=target, total=verified_count(db, source), requested_by=requested_by[:120])
+    if max_members is not None:
+        max_members = max(1, min(int(max_members), MAX_PULL))
+    available = verified_count(db, source)
+    job = PullJob(
+        source_guild=source,
+        target_guild=target,
+        max_members=max_members,
+        total=min(available, max_members) if max_members else available,
+        requested_by=requested_by[:120],
+    )
     db.add(job)
     db.commit()
     return job
@@ -196,7 +209,7 @@ def create_pull(db: Session, source: str, target: str, requested_by: str) -> Pul
 def pull_out(j: PullJob) -> dict:
     return {
         "id": j.id, "source": j.source_guild, "target": j.target_guild, "status": j.status,
-        "total": j.total, "processed": j.processed, "added": j.added, "already": j.already, "failed": j.failed,
+        "max_members": j.max_members, "total": j.total, "processed": j.processed, "added": j.added, "already": j.already, "failed": j.failed,
         "error": j.error, "requested_by": j.requested_by,
         "created_at": j.created_at.isoformat() if j.created_at else None,
         "finished_at": j.finished_at.isoformat() if j.finished_at else None,
@@ -253,6 +266,12 @@ def run_pulls() -> None:
                 db.commit()
             deadline = time.monotonic() + 8
             while time.monotonic() < deadline:
+                if job.max_members and job.processed >= job.max_members:  # chosen amount reached
+                    job.status = "done"
+                    job.finished_at = _now()
+                    db.commit()
+                    log.info("Pull %s reached its amount (%s): %s added", job.id, job.max_members, job.added)
+                    return
                 members = db.scalars(
                     select(SecurityMember)
                     .where(SecurityMember.guild_id == job.source_guild, SecurityMember.revoked.is_(False), SecurityMember.id > job.cursor)
@@ -269,6 +288,8 @@ def run_pulls() -> None:
                     db.refresh(job)
                     if job.status == "cancelled":
                         return
+                    if job.max_members and job.processed >= job.max_members:
+                        break  # the check at the top of the loop finishes the pull
                     try:
                         outcome = _add_member(http, db, job.target_guild, m)
                     except _Fatal as exc:

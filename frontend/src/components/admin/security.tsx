@@ -488,7 +488,7 @@ export function Verification({ g, act }: { g: GuildDetail; act: Act }) {
 /* ─────────────────────────── member pull ───────────────────────── */
 
 type Pull = {
-  id: number; source: string; target: string; status: string; total: number; processed: number;
+  id: number; source: string; target: string; status: string; max_members: number | null; total: number; processed: number;
   added: number; already: number; failed: number; error: string | null; created_at: string;
   source_name?: string | null; target_name?: string | null;
 };
@@ -498,6 +498,11 @@ export function MemberPull({ g, onNotice }: { g: GuildDetail; onNotice: { ok: (t
   const pulls = useAdmin<{ worker_ready: boolean; items: Pull[] }>(`/security/pulls?guild=${g.id}`);
   const guilds = useAdmin<{ items: GuildRow[] }>("/security/guilds");
   const [target, setTarget] = useState("");
+  const [amountChoice, setAmountChoice] = useState("all");
+  const [custom, setCustom] = useState("");
+  const amount = amountChoice === "all" ? null : amountChoice === "custom" ? Math.floor(Number(custom)) : Number(amountChoice);
+  const amountOk = amount === null || (Number.isFinite(amount) && amount >= 1 && amount <= 1_000_000);
+  const pulling = amount === null ? g.verified : Math.min(amount, g.verified);
   const running = pulls.data?.items.some((p) => p.status === "queued" || p.status === "running");
   const { reload } = pulls;
 
@@ -526,13 +531,33 @@ export function MemberPull({ g, onNotice }: { g: GuildDetail; onNotice: { ok: (t
                 </option>
               ))}
             </select>
+            <select className={field} value={amountChoice} onChange={(e) => setAmountChoice(e.target.value)} aria-label="How many members">
+              <option value="all">All ({g.verified})</option>
+              {[10, 25, 50, 75, 100, 500, 1000, 10000].map((n) => (
+                <option key={n} value={String(n)}>
+                  {n.toLocaleString("en")} members
+                </option>
+              ))}
+              <option value="custom">Custom…</option>
+            </select>
+            {amountChoice === "custom" && (
+              <input
+                type="number"
+                min={1}
+                max={1000000}
+                className={`${field} w-28`}
+                placeholder="amount"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+              />
+            )}
             <button
               className="btn-primary btn-sm"
-              disabled={!target || !pulls.data?.worker_ready}
+              disabled={!target || !pulls.data?.worker_ready || !amountOk}
               onClick={async () => {
-                if (!confirm(`Add ${g.verified} consenting member(s) into the selected server?`)) return;
+                if (!confirm(`Add ${pulling.toLocaleString("en")} consenting member(s) into the selected server?`)) return;
                 try {
-                  await adminCall("/security/pulls", "POST", { source: g.id, target });
+                  await adminCall("/security/pulls", "POST", { source: g.id, target, amount });
                   onNotice.ok("Pull started");
                   reload();
                 } catch (e) {
@@ -555,6 +580,7 @@ export function MemberPull({ g, onNotice }: { g: GuildDetail; onNotice: { ok: (t
                 <td className="px-4 py-2 text-blood">#{p.id}</td>
                 <td className="px-4 py-2 text-xs">
                   {p.source_name ?? p.source} → {p.target_name ?? p.target}
+                  <div className="text-dim">{p.max_members ? `amount: ${p.max_members.toLocaleString("en")}` : "amount: all"}</div>
                   {p.error && <div className="text-blood">{p.error}</div>}
                 </td>
                 <td className="px-4 py-2">

@@ -184,13 +184,14 @@ class PullIn(BaseModel):
     source: str = Field(pattern=SNOWFLAKE)
     target: str = Field(pattern=SNOWFLAKE)
     requestedBy: str = Field(default="bot", max_length=40)
+    amount: int | None = Field(default=None, ge=1, le=1_000_000)  # None = everyone who consented
 
 
 @router.post("/bot/pulls", dependencies=[Depends(require_bot)])
 def bot_pull_create(body: PullIn, db: Session = Depends(get_db)):
     if body.source == body.target:
         raise HTTPException(400, "Source and target must differ")
-    job = sx.create_pull(db, body.source, body.target, f"discord:{body.requestedBy}")
+    job = sx.create_pull(db, body.source, body.target, f"discord:{body.requestedBy}", body.amount)
     return {"job": sx.pull_out(job)}
 
 

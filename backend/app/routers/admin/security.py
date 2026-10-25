@@ -156,6 +156,7 @@ def guild_action(guild_id: str, body: ActionIn, db: Session = Depends(get_db), a
 class PullCreateIn(BaseModel):
     source: str = Field(pattern=r"^\d{5,25}$")
     target: str = Field(pattern=r"^\d{5,25}$")
+    amount: int | None = Field(default=None, ge=1, le=1_000_000)  # None = everyone who consented
 
 
 @router.get("/pulls")
@@ -179,8 +180,8 @@ def create_pull(body: PullCreateIn, db: Session = Depends(get_db), admin: AdminC
     target = db.get(SecurityGuild, body.target)
     if not target:
         raise HTTPException(400, "Security X is not in the target server. Invite it there first.")
-    job = sx.create_pull(db, body.source, body.target, f"panel:{admin.username}")
-    audit(db, admin.username, "security.pull_create", "security_pull", job.id, {"source": body.source, "target": body.target}, ip=admin.ip)
+    job = sx.create_pull(db, body.source, body.target, f"panel:{admin.username}", body.amount)
+    audit(db, admin.username, "security.pull_create", "security_pull", job.id, {"source": body.source, "target": body.target, "amount": body.amount}, ip=admin.ip)
     db.commit()
     return sx.pull_out(job)
 

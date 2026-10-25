@@ -82,6 +82,7 @@ class PullJob(Base):
     source_guild: Mapped[str] = mapped_column(String(25), index=True)
     target_guild: Mapped[str] = mapped_column(String(25), index=True)
     status: Mapped[str] = mapped_column(String(16), default="queued", index=True)  # queued|running|done|failed|cancelled
+    max_members: Mapped[int | None] = mapped_column(Integer)  # pull at most this many (None = everyone who consented)
     total: Mapped[int] = mapped_column(Integer, default=0)
     processed: Mapped[int] = mapped_column(Integer, default=0)
     added: Mapped[int] = mapped_column(Integer, default=0)
