@@ -1,0 +1,9 @@
+{
+  "application_id": "PUT-THE-APPLICATION-ID-HERE",
+  "name": "My Bot",
+  "short_description": "One or two sentences about what the bot does. Shown on the bot card and at the top of the bot page.",
+  "tags": ["utility"],
+  "category": "Utility",
+  "pricing_type": "free",
+  "version": "1.0.0"
+}

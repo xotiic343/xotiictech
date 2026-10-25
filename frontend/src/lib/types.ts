@@ -19,12 +19,15 @@ export type BotCard = {
   first_seen_at: string;
 };
 
+/** A Discord command option. type 1 = subcommand, 2 = subcommand group (both carry nested options). */
+export type CommandOption = { name: string; description?: string; type: number; required?: boolean; options?: CommandOption[] };
+
 export type BotCommand = {
   id: number;
   name: string;
   description: string | null;
   type: number;
-  options: { name: string; description?: string; type: number; required?: boolean }[];
+  options: CommandOption[];
   guild_scoped: boolean;
 };
 

@@ -120,6 +120,23 @@ model TicketCategory {
   sortOrder   Int     @default(0)
 }
 
+// Work the website asks the bot to do (open a ticket channel, post a reply, claim/close/...).
+// The bot runs on Discloud and can't receive web requests, so it polls /support/api/bot/jobs every few
+// seconds, runs each job with its normal ticket logic, and posts the result back.
+model BotJob {
+  id         String    @id @default(cuid())
+  kind       String // ticket.create | ticket.message | ticket.action
+  payload    Json
+  status     String    @default("pending") // pending | running | done | failed | expired
+  result     Json?
+  error      String?
+  createdAt  DateTime  @default(now())
+  claimedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
 // Last heartbeat per bot (key = the botKey the bot sends, e.g. "ticket-bot"). Drives the online dot.
 model BotHeartbeat {
   key        String   @id

@@ -1,0 +1,11 @@
+{
+  "application_id": "1361964514693877760",
+  "name": "Ticket X",
+  "short_description": "A full ticket system for Discord: panels, claims, priorities, HTML transcripts, auto-close, feedback ratings and staff statistics.",
+  "tags": ["tickets", "support", "transcripts", "staff tools", "utility"],
+  "category": "Support",
+  "pricing_type": "free",
+  "website_url": "https://xotiictech.net/support",
+  "version": "1.0.0",
+  "featured": true
+}

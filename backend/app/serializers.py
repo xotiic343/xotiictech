@@ -43,6 +43,21 @@ def command_out(c: BotCommand) -> dict:
     }
 
 
+SUB_COMMAND, SUB_COMMAND_GROUP = 1, 2  # Discord application command option types
+
+
+def leaf_command_count(c: BotCommand) -> int:
+    """How many runnable commands a top-level command holds: `/ticket` with 9 subcommands counts as 9.
+    Subcommand groups count their subcommands. A command without subcommands counts as 1."""
+    total = 0
+    for o in c.options or []:
+        if o.get("type") == SUB_COMMAND:
+            total += 1
+        elif o.get("type") == SUB_COMMAND_GROUP:
+            total += sum(1 for s in o.get("options") or [] if s.get("type") == SUB_COMMAND)
+    return total or 1
+
+
 def bot_card(b: Bot) -> dict:
     return {
         "id": b.id,
@@ -54,7 +69,7 @@ def bot_card(b: Bot) -> dict:
         "tags": b.effective_tags,
         "category": b.category,
         "guild_count": b.guild_count,
-        "command_count": sum(1 for c in b.commands if not c.is_hidden),
+        "command_count": sum(leaf_command_count(c) for c in b.commands if not c.is_hidden),
         "status": b.status,
         "is_featured": b.is_featured,
         "pricing_type": b.pricing_type,

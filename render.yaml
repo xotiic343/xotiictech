@@ -134,9 +134,5 @@ services:
         sync: false
       - key: STAFF_ROLE_ID
         sync: false
-      - key: BOT_HEARTBEAT_SECRET # must equal BOT_HEARTBEAT_SECRET in the bot's .env
-        sync: false
-      - key: BOT_API_URL
-        sync: false
-      - key: BOT_API_SECRET
+      - key: BOT_HEARTBEAT_SECRET # must equal BOT_HEARTBEAT_SECRET in the bot's .env (heartbeat, jobs, sync)
         sync: false

@@ -9,7 +9,7 @@ import { MediaGallery } from "@/components/MediaGallery";
 import { Stars, StatusDot } from "@/components/ui";
 import { apiGet } from "@/lib/backend";
 import { compact, date, statValue, timeAgo } from "@/lib/format";
-import type { BotDetail } from "@/lib/types";
+import type { BotCommand, BotDetail, CommandOption } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -24,11 +24,41 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const PRICING: Record<string, string> = { free: "Free", premium: "Premium", custom: "Custom" };
 const CMD_TYPE: Record<number, string> = { 1: "/", 2: "user ›", 3: "msg ›" };
+const SUB_COMMAND = 1;
+const SUB_COMMAND_GROUP = 2;
+
+type CommandRow = { key: string; type: number; name: string; description: string | null; params: CommandOption[] };
+
+/**
+ * Discord stores `/ticket claim` as an option of `/ticket`. Expand subcommands (and subcommand groups)
+ * into their own rows, so the list shows every command a user can actually run, with its parameters.
+ */
+function commandRows(commands: BotCommand[]): CommandRow[] {
+  const rows: CommandRow[] = [];
+  for (const c of commands) {
+    const subs = c.options.filter((o) => o.type === SUB_COMMAND || o.type === SUB_COMMAND_GROUP);
+    if (subs.length === 0) {
+      rows.push({ key: `${c.id}`, type: c.type, name: c.name, description: c.description, params: c.options });
+      continue;
+    }
+    for (const s of subs) {
+      if (s.type === SUB_COMMAND) {
+        rows.push({ key: `${c.id}:${s.name}`, type: c.type, name: `${c.name} ${s.name}`, description: s.description ?? null, params: s.options ?? [] });
+      } else {
+        for (const g of (s.options ?? []).filter((o) => o.type === SUB_COMMAND)) {
+          rows.push({ key: `${c.id}:${s.name}:${g.name}`, type: c.type, name: `${c.name} ${s.name} ${g.name}`, description: g.description ?? null, params: g.options ?? [] });
+        }
+      }
+    }
+  }
+  return rows;
+}
 
 export default async function BotPage({ params }: Props) {
   const { slug } = await params;
   const bot = await apiGet<BotDetail>(`/bots/${slug}`);
   if (!bot) notFound();
+  const commands = commandRows(bot.commands);
 
   return (
     <article>
@@ -100,25 +130,25 @@ export default async function BotPage({ params }: Props) {
           <section className="mt-12">
             <div className="mb-4 flex items-end justify-between">
               <h2 className="h-display text-xl">
-                Commands <span className="text-blood">[{bot.commands.length}]</span>
+                Commands <span className="text-blood">[{commands.length}]</span>
               </h2>
               <span className="text-[11px] uppercase tracking-wider text-dim">synced {timeAgo(bot.last_synced_at)}</span>
             </div>
-            {bot.commands.length ? (
+            {commands.length ? (
               <div className="divide-y divide-line border border-line bg-ink/80">
-                {bot.commands.map((c) => (
-                  <details key={c.id} className="group px-4 py-3 open:bg-panel">
+                {commands.map((c) => (
+                  <details key={c.key} className="group px-4 py-3 open:bg-panel">
                     <summary className="flex cursor-pointer list-none items-center gap-3">
-                      <code className="text-sm text-blood">
+                      <code className="shrink-0 text-sm text-blood">
                         <span className="text-dim">{CMD_TYPE[c.type] ?? "/"}</span>
                         {c.name}
                       </code>
                       <span className="truncate text-sm text-muted">{c.description}</span>
-                      {c.options.length > 0 && <span className="ml-auto text-xs text-dim group-open:rotate-90">▸</span>}
+                      {c.params.length > 0 && <span className="ml-auto text-xs text-dim group-open:rotate-90">▸</span>}
                     </summary>
-                    {c.options.length > 0 && (
+                    {c.params.length > 0 && (
                       <ul className="mt-3 space-y-1 pl-4 text-xs">
-                        {c.options.map((o) => (
+                        {c.params.map((o) => (
                           <li key={o.name} className="text-muted">
                             <span className="text-amber">{o.name}</span>
                             {o.required && <span className="text-blood">*</span>} — {o.description}

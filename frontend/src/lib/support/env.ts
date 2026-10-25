@@ -10,12 +10,19 @@ const schema = z.object({
   DISCORD_CLIENT_ID: z.string().min(1),
   DISCORD_CLIENT_SECRET: z.string().min(1),
   DISCORD_BOT_TOKEN: z.string().min(1),
-  DISCORD_GUILD_ID: z.string().regex(/^\d+$/),
-  STAFF_ROLE_ID: z.string().min(1), // one ID, or several separated by commas
-  BOT_HEARTBEAT_SECRET: z.string().default(""), // shared with the bot: heartbeat + sync events
-  BOT_API_URL: z.string().default(""), // the bot's internal API (docs/SUPPORT.md, section B)
-  BOT_API_SECRET: z.string().default(""),
+  // Xotiic Support server and its staff role. IDs aren't secrets, so they're defaults here;
+  // set the env vars on Render only to override them. STAFF_ROLE_ID may list several, comma-separated.
+  DISCORD_GUILD_ID: z.string().regex(/^\d+$/).default("1344385779627069541"),
+  STAFF_ROLE_ID: z.string().min(1).default("1366825298535907420"),
+  // Shared with the bot: authenticates its heartbeat, job polling and sync events.
+  BOT_HEARTBEAT_SECRET: z.string().min(16),
 });
+
+/** Names (never values) of support variables that are missing or invalid. Shown on the "being set up" page. */
+export function missingSupportEnv(): string[] {
+  const parsed = schema.safeParse(process.env);
+  return parsed.success ? [] : [...new Set(parsed.error.issues.map((i) => String(i.path[0])))];
+}
 
 let cached: z.infer<typeof schema> | null = null;
 

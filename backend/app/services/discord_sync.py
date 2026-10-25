@@ -17,6 +17,7 @@ from app.db import SessionLocal, engine
 from app.models import Bot, BotCommand, BotSyncLog, DiscordToken
 from app.services import site_settings
 from app.services.audit import audit
+from app.services.bot_files import apply_bot_file, load_bot_files
 from app.services.discord_client import DiscordAuthError, DiscordClient, DiscordError
 from app.services.slugs import unique_slug
 
@@ -230,6 +231,9 @@ def _sync_one(db: Session, client: DiscordClient, auto_publish: bool) -> tuple[B
     db.flush()
 
     _upsert_commands(db, bot, commands)
+    # Hand-written details from backend/my-bots/ win over the thin data Discord provides.
+    if apply_bot_file(bot, load_bot_files()):
+        log.info("applied my-bots details to %s", bot.slug)
     return bot, is_new
 
 
