@@ -9,8 +9,32 @@ import Discord from "next-auth/providers/discord";
 import { env } from "./env";
 import { prisma } from "./db";
 
+// Last login error, so /support/auth/error can show the real reason instead of a bare "Configuration".
+// Holds only the error type and the provider's reply (e.g. "invalid_client"), never secrets or tokens.
+const errorStore = globalThis as unknown as { supportLastAuthError?: { at: number; detail: string } };
+
+function describe(error: Error): string {
+  const e = error as Error & { type?: string; cause?: { err?: Error } & Record<string, unknown> };
+  const inner = e.cause?.err;
+  const parts = [e.type ?? e.name, inner?.message ?? e.message].filter(Boolean);
+  return parts.join(": ").replace(/\s+/g, " ").slice(0, 300);
+}
+
+/** The most recent login error from the last 10 minutes, if any. */
+export function lastAuthError(): string | null {
+  const last = errorStore.supportLastAuthError;
+  return last && Date.now() - last.at < 10 * 60_000 ? last.detail : null;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   secret: env().AUTH_SECRET,
+  logger: {
+    error(error: Error) {
+      const detail = describe(error);
+      errorStore.supportLastAuthError = { at: Date.now(), detail };
+      console.error("[auth][error]", detail, error);
+    },
+  },
   trustHost: true,
   basePath: "/support/api/auth",
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
