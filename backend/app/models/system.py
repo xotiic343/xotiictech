@@ -22,6 +22,9 @@ class PageView(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     path: Mapped[str] = mapped_column(String(300), index=True)
     referrer: Mapped[str | None] = mapped_column(String(500))
+    # Anonymous daily visitor id: sha256(secret, date, ip, user agent), truncated. No raw IP is stored, and
+    # it changes every day, so it can't track anyone over time. Used to count unique visitors and dedupe.
+    visitor: Mapped[str | None] = mapped_column(String(32), index=True)
     bot_id: Mapped[int | None] = mapped_column(Integer, index=True)
     product_id: Mapped[int | None] = mapped_column(Integer, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

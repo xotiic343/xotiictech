@@ -18,14 +18,10 @@ function Counter({ value }: { value: number | string | null }) {
 
 export function StatsBar({ stats }: { stats: { label: string; value: number | string | null }[] }) {
   return (
-    <div className="grid grid-cols-2 border border-line bg-ink/80 md:grid-cols-4">
-      {stats.map((s, i) => (
-        <div
-          key={s.label}
-          className={`relative px-5 py-6 text-center ${i % 2 === 1 ? "border-l border-line" : ""} ${
-            i >= 2 ? "border-t border-line md:border-t-0" : ""
-          } ${i >= 1 ? "md:border-l" : ""}`}
-        >
+    // gap-px over a line-colored background draws the dividers, so any number of stats lines up.
+    <div className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
+      {stats.map((s) => (
+        <div key={s.label} className="relative bg-ink px-5 py-6 text-center">
           <div className="font-display text-3xl font-black text-white glow-text sm:text-4xl">
             <Counter value={s.value} />
           </div>

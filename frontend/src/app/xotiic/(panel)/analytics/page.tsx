@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { PageTitle, Panel, Table, useAdmin } from "@/components/admin/kit";
+import { PageTitle, Panel, Table, adminCall, useAdmin, useNotice } from "@/components/admin/kit";
 import { compact, money } from "@/lib/format";
 
-type Day = { date: string; views: number; sales: number; revenue_cents: number };
+type Day = { date: string; views: number; visitors: number; sales: number; revenue_cents: number };
 type Analytics = {
   days: Day[];
-  totals: { views: number; sales: number; revenue_cents: number };
+  totals: { views: number; visitors: number; sales: number; revenue_cents: number };
   top_products: { name: string; sales: number; revenue_cents: number }[];
   top_bots: { name: string; slug: string; views: number }[];
   top_pages: { path: string; views: number }[];
@@ -15,25 +15,47 @@ type Analytics = {
 
 export default function AnalyticsAdmin() {
   const [days, setDays] = useState(30);
-  const { data } = useAdmin<Analytics>(`/analytics?days=${days}`);
+  const { data, reload } = useAdmin<Analytics>(`/analytics?days=${days}`);
+  const { notice, ok, fail } = useNotice();
+
+  async function reset() {
+    if (!confirm("Delete ALL recorded page views and start counting from zero? Sales and revenue are not affected.")) return;
+    try {
+      const r = await adminCall<{ deleted: number }>("/analytics/reset", "POST");
+      ok(`Cleared ${r.deleted} page views`);
+      reload();
+    } catch (e) {
+      fail(e);
+    }
+  }
 
   return (
     <div className="space-y-6">
+      {notice}
       <PageTitle title="Analytics">
         {[7, 30, 90, 365].map((d) => (
           <button key={d} onClick={() => setDays(d)} className={`btn-sm border ${days === d ? "border-blood text-blood" : "border-edge text-muted"}`}>
             {d}d
           </button>
         ))}
+        <button onClick={reset} className="btn-sm border border-blood/60 text-blood hover:bg-blood/10">
+          Reset views
+        </button>
       </PageTitle>
+      <p className="text-[11px] text-dim">
+        Bots, link previews and your own admin visits aren&apos;t counted, and the same visitor reopening a page within 30 minutes counts once.
+        Visitors are anonymous daily IDs, so no IPs are stored.
+      </p>
       {data && (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <Tile label="Visitors" value={compact(data.totals.visitors)} />
             <Tile label="Page views" value={compact(data.totals.views)} />
             <Tile label="Sales" value={data.totals.sales} />
             <Tile label="Revenue" value={money(data.totals.revenue_cents)} />
           </div>
           {/* One measure per chart: views and revenue have different scales, so they never share an axis. */}
+          <BarChart title="Visitors per day" days={data.days} value={(d) => d.visitors} format={(v) => `${v} visitors`} />
           <BarChart title="Page views per day" days={data.days} value={(d) => d.views} format={(v) => `${v} views`} />
           <BarChart title="Revenue per day" days={data.days} value={(d) => d.revenue_cents} format={(v) => money(v)} />
           <div className="grid gap-6 xl:grid-cols-3">

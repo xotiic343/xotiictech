@@ -72,6 +72,10 @@ export default async function HomePage() {
               { label: "Bots deployed", value: stats.bots_deployed ?? 0 },
               { label: "Servers reached", value: stats.servers_reached ?? 0 },
               { label: "Clients", value: stats.clients ?? 0 },
+              { label: "Visitors / 30d", value: stats.visitors_30d ?? 0 },
+              { label: "Users", value: stats.users ?? 0 },
+              { label: "Servers protected", value: stats.protected_servers ?? 0 },
+              { label: "Verified users", value: stats.verified_members ?? 0 },
             ]}
           />
         </Reveal>

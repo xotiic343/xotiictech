@@ -9,6 +9,7 @@ type Dash = {
   revenue_cents: Record<string, number>;
   orders_30d: number;
   views_30d: number;
+  visitors_30d: number;
   unpublished_bots: number;
   new_inquiries: number;
   new_messages: number;
@@ -49,8 +50,12 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Tile label="Revenue (all time)" value={revenue} />
         <Tile label="Orders / 30d" value={data.orders_30d} />
+        <Tile label="Visitors / 30d" value={compact(data.visitors_30d)} />
         <Tile label="Page views / 30d" value={compact(data.views_30d)} />
         <Tile label="Clients" value={data.stats.clients} />
+        <Tile label="Accounts" value={data.stats.users} />
+        <Tile label="Security X servers" value={data.stats.protected_servers} />
+        <Tile label="Verified members" value={compact(data.stats.verified_members)} />
         <Tile label="Bots live" value={`${data.stats.bots_online}/${data.stats.bots_deployed}`} />
         <Tile label="Servers reached" value={compact(data.stats.servers_reached)} />
         <Tile label="Commands" value={data.stats.total_commands} />

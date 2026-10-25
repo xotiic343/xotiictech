@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -48,6 +48,7 @@ def dashboard(db: Session = Depends(get_db), _: AdminContext = Depends(require_a
         "revenue_cents": revenue_by_currency,
         "orders_30d": db.scalar(select(func.count()).select_from(paid.where(Order.paid_at >= _since(30)).subquery())),
         "views_30d": db.scalar(select(func.count(PageView.id)).where(PageView.created_at >= _since(30))),
+        "visitors_30d": live_stats(db)["visitors_30d"],
         "unpublished_bots": db.scalar(select(func.count(Bot.id)).where(Bot.is_published.is_(False), Bot.is_hidden.is_(False))),
         "new_inquiries": db.scalar(select(func.count(BotInquiry.id)).where(BotInquiry.status == "new")),
         "new_messages": db.scalar(select(func.count(ContactMessage.id)).where(ContactMessage.status == "new")),
@@ -66,17 +67,22 @@ def analytics(
     db: Session = Depends(get_db), _: AdminContext = Depends(require_admin), days: int = Query(30, ge=1, le=365)
 ):
     since = _since(days)
-    views = db.scalars(select(PageView.created_at).where(PageView.created_at >= since)).all()
+    views = db.execute(select(PageView.created_at, PageView.visitor).where(PageView.created_at >= since)).all()
     orders = db.scalars(select(Order).where(Order.status == "paid", Order.paid_at >= since)).unique().all()
 
     by_day: dict[str, dict] = {}
     for i in range(days):
         d = (datetime.now(timezone.utc) - timedelta(days=days - 1 - i)).date().isoformat()
-        by_day[d] = {"date": d, "views": 0, "sales": 0, "revenue_cents": 0}
-    for ts in views:
+        by_day[d] = {"date": d, "views": 0, "visitors": 0, "sales": 0, "revenue_cents": 0}
+    seen: dict[str, set] = {}
+    for ts, visitor in views:
         d = ts.date().isoformat()
         if d in by_day:
             by_day[d]["views"] += 1
+            if visitor:
+                seen.setdefault(d, set()).add(visitor)
+    for d, visitors in seen.items():
+        by_day[d]["visitors"] = len(visitors)
     for o in orders:
         d = o.paid_at.date().isoformat()
         if d in by_day:
@@ -109,6 +115,7 @@ def analytics(
         "days": list(by_day.values()),
         "totals": {
             "views": len(views),
+            "visitors": sum(len(v) for v in seen.values()),
             "sales": len(orders),
             "revenue_cents": sum(o.amount_cents for o in orders),
         },
@@ -116,6 +123,15 @@ def analytics(
         "top_bots": [{"name": dn or u, "slug": s, "views": c} for u, dn, s, c in top_bots],
         "top_pages": [{"path": p, "views": c} for p, c in top_pages],
     }
+
+
+@router.post("/analytics/reset")
+def reset_analytics(db: Session = Depends(get_db), admin: AdminContext = Depends(require_admin)):
+    """Delete every recorded page view (e.g. to clear traffic counted before bot/duplicate filtering)."""
+    deleted = db.execute(delete(PageView)).rowcount or 0
+    audit(db, admin.username, "analytics.reset", "page_views", None, {"deleted": deleted}, ip=admin.ip)
+    db.commit()
+    return {"deleted": deleted}
 
 
 # ---------------- site content ----------------

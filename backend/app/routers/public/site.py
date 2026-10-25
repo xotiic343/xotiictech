@@ -1,4 +1,6 @@
-from datetime import datetime, time, timezone
+import hashlib
+import re
+from datetime import datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.net import client_ip
 from app.core.ratelimit import limiter
+from app.core.security import ADMIN_COOKIE
 from app.db import get_db
 from app.models import (
     Bot,
@@ -19,7 +22,10 @@ from app.models import (
     Order,
     PageView,
     Product,
+    SecurityGuild,
+    SecurityMember,
     Testimonial,
+    User,
 )
 from app.schemas import ContactIn, NewsletterIn, PageViewIn
 from app.serializers import iso, leaf_command_count, testimonial_out
@@ -27,6 +33,14 @@ from app.services import site_settings, storage
 from app.services.email import notify_admin
 
 router = APIRouter(tags=["site"])
+
+# Non-human traffic that would otherwise inflate page views.
+_BOT_UA = re.compile(
+    r"bot|crawl|spider|slurp|preview|monitor|uptime|pingdom|headless|lighthouse|python|curl|wget|httpx|"
+    r"axios|node-fetch|go-http|java/|okhttp|facebookexternalhit|whatsapp|telegram|embedly|scrapy|semrush|ahrefs",
+    re.IGNORECASE,
+)
+VIEW_DEDUPE = timedelta(minutes=30)
 
 
 def _public_bots():
@@ -45,6 +59,7 @@ def live_stats(db: Session) -> dict:
         if bot_ids
         else 0
     )
+    since_30d = datetime.now(timezone.utc) - timedelta(days=30)
     return {
         "products_sold": db.scalar(select(func.count(Order.id)).where(Order.status == "paid")) or 0,
         "bots_deployed": len(bots),
@@ -52,6 +67,20 @@ def live_stats(db: Session) -> dict:
         "servers_reached": sum(b.guild_count for b in bots),
         "total_commands": commands or 0,
         "clients": db.scalar(select(func.count(distinct(Order.email))).where(Order.status == "paid")) or 0,
+        # Real, de-duplicated traffic (see page_view): distinct anonymous visitors per day, summed over 30 days.
+        "visitors_30d": db.scalar(
+            select(func.count()).select_from(
+                select(PageView.visitor, func.date(PageView.created_at))
+                .where(PageView.created_at >= since_30d, PageView.visitor.is_not(None))
+                .distinct()
+                .subquery()
+            )
+        ) or 0,
+        "users": db.scalar(select(func.count(User.id)).where(User.is_active.is_(True))) or 0,
+        "protected_servers": db.scalar(select(func.count()).select_from(SecurityGuild)) or 0,
+        "verified_members": db.scalar(
+            select(func.count()).select_from(SecurityMember).where(SecurityMember.revoked.is_(False))
+        ) or 0,
     }
 
 
@@ -151,10 +180,34 @@ def newsletter(request: Request, body: NewsletterIn, db: Session = Depends(get_d
     return {"ok": True}
 
 
+def _visitor_id(request: Request) -> str:
+    """Anonymous daily visitor id. Hash of secret + date + IP + user agent: no raw IP is kept, and it
+    rotates every day."""
+    day = datetime.now(timezone.utc).date().isoformat()
+    raw = f"{settings.secret_key}:{day}:{client_ip(request)}:{request.headers.get('user-agent', '')}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
 @router.post("/analytics/view", status_code=204)
-@limiter.limit("120/minute")
+@limiter.limit("60/minute")
 def page_view(request: Request, body: PageViewIn, db: Session = Depends(get_db)):
-    view = PageView(path=body.path[:300], referrer=(body.referrer or "")[:500] or None)
+    """Counts real human page views only:
+    - bots, crawlers, link previews and uptime checkers are ignored (user agent),
+    - the signed-in admin is ignored (you browsing your own site),
+    - the same visitor opening the same page again within 30 minutes counts once (refreshes, back/forward)."""
+    ua = request.headers.get("user-agent", "")
+    if not ua or _BOT_UA.search(ua) or request.cookies.get(ADMIN_COOKIE):
+        return
+    visitor = _visitor_id(request)
+    path = body.path[:300]
+    recent = db.scalar(
+        select(PageView.id)
+        .where(PageView.visitor == visitor, PageView.path == path, PageView.created_at >= datetime.now(timezone.utc) - VIEW_DEDUPE)
+        .limit(1)
+    )
+    if recent:
+        return
+    view = PageView(path=path, referrer=(body.referrer or "")[:500] or None, visitor=visitor)
     parts = body.path.strip("/").split("/")
     if len(parts) == 2 and parts[0] in ("bots", "store"):
         model = Bot if parts[0] == "bots" else Product
