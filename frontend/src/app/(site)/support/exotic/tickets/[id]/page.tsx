@@ -8,6 +8,7 @@ import { Transcript } from "@/components/support/Transcript";
 import { StaffActions } from "@/components/support/StaffActions";
 import { StaffNotes } from "@/components/support/StaffNotes";
 import { ActivityFeed } from "@/components/support/ActivityFeed";
+import { LiveRefresh } from "@/components/support/LiveRefresh";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -28,6 +29,7 @@ export default async function StaffTicketPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
+      <LiveRefresh query={`ticket=${ticket.id}`} />
       <Link href="/support/exotic/tickets" className="aberrate text-xs uppercase tracking-[0.2em] text-blood hover:text-white">
         ← Queue
       </Link>

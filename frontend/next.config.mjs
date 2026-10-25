@@ -30,6 +30,9 @@ const csp = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  compress: true,
+  // Only bundle the framer-motion pieces pages actually import, which keeps client JS smaller.
+  experimental: { optimizePackageImports: ["framer-motion"] },
   eslint: { ignoreDuringBuilds: true },
   // Same-origin proxy: browser → xotiictech.com/api/* → FastAPI (keeps auth cookies first-party).
   // /support's own API lives at /support/api/* (Next.js route handlers), so it never hits this proxy.

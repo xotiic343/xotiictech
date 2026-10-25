@@ -8,6 +8,7 @@ import { LoginPrompt } from "@/components/support/LoginPrompt";
 import { TicketStatusBadge } from "@/components/support/TicketStatusBadge";
 import { Transcript } from "@/components/support/Transcript";
 import { ReplyBox } from "@/components/support/ReplyBox";
+import { LiveRefresh } from "@/components/support/LiveRefresh";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -35,6 +36,7 @@ export default async function TicketPage({ params }: Props) {
 
   return (
     <div className="container-x max-w-4xl space-y-8 py-12">
+      <LiveRefresh query={`ticket=${ticket.id}`} />
       <Link href="/support/tickets" className="aberrate text-xs uppercase tracking-[0.2em] text-blood hover:text-white">
         ← My tickets
       </Link>

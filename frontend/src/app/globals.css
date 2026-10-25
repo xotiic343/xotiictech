@@ -14,6 +14,7 @@ html {
   background: #000;
   scrollbar-color: var(--red) #0a0a0a;
   scrollbar-width: thin;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -44,16 +45,20 @@ body {
   background: repeating-linear-gradient(to bottom, #ff3355 0 6px, #500010 6px 8px);
 }
 
-/* ---------- CRT scanlines + vignette (global overlay) ---------- */
+/* ---------- CRT scanlines + vignette (global overlay) ----------
+   Performance: no mix-blend-mode. A full-screen blended layer forces the browser to re-blend the whole page
+   every time anything under it changes (the matrix canvas redraws ~15x/s), which was the main source of lag.
+   Plain low-alpha scanlines look the same on a black site. Its own GPU layer, painted once. */
 .crt-overlay {
   pointer-events: none;
   position: fixed;
   inset: 0;
   z-index: 60;
   background:
-    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
     radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
-  mix-blend-mode: overlay;
+  transform: translateZ(0);
+  contain: strict;
 }
 
 .crt-flicker {
@@ -137,8 +142,10 @@ body {
     @apply px-3 py-1.5 text-xs tracking-[0.12em];
   }
 
+  /* No backdrop-blur: every blurred card re-blurred the animated background on each frame (dozens per page).
+     95% opaque ink looks the same. Transitions are limited to the properties that actually change. */
   .card {
-    @apply relative border border-line bg-ink/90 backdrop-blur-sm transition-all duration-200;
+    @apply relative border border-line bg-ink/95 transition-[border-color,box-shadow,transform] duration-200;
   }
   .card-hover {
     @apply hover:border-crimson/70 hover:shadow-neon hover:-translate-y-0.5;
@@ -225,6 +232,9 @@ html[data-booted] .boot-overlay {
 .prose-x hr { @apply my-8 border-line; }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;

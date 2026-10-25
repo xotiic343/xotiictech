@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/support/session";
 import { LoginPrompt } from "@/components/support/LoginPrompt";
 import { TicketRow } from "@/components/support/TicketRow";
 import { RowsSkeleton } from "@/components/support/Skeletons";
+import { LiveRefresh } from "@/components/support/LiveRefresh";
 
 export const metadata: Metadata = { title: "My tickets" };
 
@@ -27,6 +28,7 @@ export default async function MyTicketsPage() {
           <LoginPrompt message="Log in with Discord to see the tickets you've opened." />
         ) : (
           <Suspense fallback={<RowsSkeleton />}>
+            <LiveRefresh query="scope=mine" />
             <TicketList userId={user.discordId} />
           </Suspense>
         )}

@@ -38,7 +38,7 @@ export default async function SupportLayout({ children }: { children: React.Reac
 
   return (
     <>
-      <div className="border-b border-line bg-black/70 backdrop-blur-sm">
+      <div className="border-b border-line bg-black/90">
         <div className="container-x flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
           <SupportTabs tabs={tabs} />
           {configured && (

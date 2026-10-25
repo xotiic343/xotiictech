@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/support/staff";
 import { STATES, STATE_LABEL } from "@/lib/support/tickets";
 import { ticketQuerySchema } from "@/lib/support/validators";
 import { TicketRow } from "@/components/support/TicketRow";
+import { LiveRefresh } from "@/components/support/LiveRefresh";
 
 const PAGE_SIZE = 25;
 const SORTS = {
@@ -64,6 +65,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-6">
+      <LiveRefresh query="scope=queue" />
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="eyebrow mb-2">// queue</div>

@@ -7,12 +7,14 @@ import { SupportStat } from "@/components/support/SupportStat";
 import { BarList } from "@/components/support/BarList";
 import { ActivityFeed } from "@/components/support/ActivityFeed";
 import { BlockSkeleton, StatsSkeleton } from "@/components/support/Skeletons";
+import { LiveRefresh } from "@/components/support/LiveRefresh";
 
 export default async function ExoticDashboard() {
   await requireStaff();
 
   return (
     <div className="space-y-8">
+      <LiveRefresh query="scope=queue" intervalMs={6000} />
       <header>
         <div className="eyebrow mb-2">// staff panel</div>
         <h1 className="h-display text-2xl sm:text-3xl">Dashboard</h1>

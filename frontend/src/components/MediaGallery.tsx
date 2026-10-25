@@ -22,7 +22,7 @@ export function MediaGallery({ media, fallback }: { media: Media[]; fallback?: R
             transition={{ duration: 0.2 }}
           >
             {current.type === "video" ? (
-              <video src={current.url} controls playsInline className="h-full w-full object-contain" />
+              <video src={current.url} controls playsInline preload="metadata" className="h-full w-full object-contain" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={current.url} alt={current.alt ?? ""} className="h-full w-full object-contain" />
@@ -45,7 +45,7 @@ export function MediaGallery({ media, fallback }: { media: Media[]; fallback?: R
                 <span className="grid h-full w-full place-items-center bg-panel text-xs text-blood">▶ VIDEO</span>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.url} alt="" className="h-full w-full object-cover" />
+                <img src={m.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               )}
             </button>
           ))}

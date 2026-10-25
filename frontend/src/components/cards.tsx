@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusDot } from "@/components/ui";
+import { LazyVideo } from "@/components/fx/LazyVideo";
 import { CATEGORY_LABELS, compact, money } from "@/lib/format";
 import type { BotCard as Bot, ProductCard as Product } from "@/lib/types";
 
@@ -73,7 +74,7 @@ export function ProductCard({ product }: { product: Product }) {
             loading="lazy"
           />
         ) : cover?.type === "video" ? (
-          <video src={cover.url} muted loop playsInline autoPlay className="h-full w-full object-cover" />
+          <LazyVideo src={cover.url} className="h-full w-full object-cover" />
         ) : (
           <div className="grid h-full w-full place-items-center font-display text-4xl font-black text-crimson/40">
             {product.name.slice(0, 2).toUpperCase()}

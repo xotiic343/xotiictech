@@ -31,8 +31,9 @@ export function BootSequence() {
       setVisible(false);
       return;
     }
-    const timers = LINES.map((_, i) => setTimeout(() => setShown(i + 1), 120 + i * 160));
-    const done = setTimeout(finish, 120 + LINES.length * 160 + 260); // < 1.5s total
+    // Quick on purpose (~0.75s): it's a flourish on the first visit of a session, not a loading screen.
+    const timers = LINES.map((_, i) => setTimeout(() => setShown(i + 1), 60 + i * 90));
+    const done = setTimeout(finish, 60 + LINES.length * 90 + 160);
     const skip = () => finish();
     window.addEventListener("keydown", skip);
     return () => {
@@ -48,8 +49,8 @@ export function BootSequence() {
         <motion.div
           className="boot-overlay fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-black"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, filter: "blur(4px)" }}
-          transition={{ duration: 0.25 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           onClick={finish}
           role="presentation"
         >

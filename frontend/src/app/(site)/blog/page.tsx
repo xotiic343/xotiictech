@@ -25,7 +25,7 @@ export default async function BlogPage() {
                 <Link href={`/blog/${p.slug}`} className="card card-hover group flex h-full flex-col overflow-hidden">
                   {p.cover_image && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.cover_image} alt="" className="aspect-[2/1] w-full border-b border-line object-cover opacity-80 group-hover:opacity-100" />
+                    <img src={p.cover_image} alt="" loading="lazy" decoding="async" className="aspect-[2/1] w-full border-b border-line object-cover opacity-80 group-hover:opacity-100" />
                   )}
                   <div className="flex flex-1 flex-col p-6">
                     <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.2em]">
