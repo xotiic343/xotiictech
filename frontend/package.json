@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "prestart": "node scripts/support-setup.mjs",
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
