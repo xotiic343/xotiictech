@@ -182,11 +182,13 @@ def _sync_one(db: Session, client: DiscordClient, auto_publish: bool) -> tuple[B
     app = client.application()
     app_id = str(app.get("id") or me["id"])
 
+    # Discord's approximate_guild_count lags by hours (a freshly invited bot still reports 0), so for
+    # smaller bots count the actual server list: one request for up to 200 servers, and always exact.
     guild_count = app.get("approximate_guild_count")
     guilds: list[dict] | None = None
-    if guild_count is None or settings.discord_sync_guild_commands:
+    if not guild_count or guild_count < 200 or settings.discord_sync_guild_commands:
         guilds = client.guilds()
-        guild_count = len(guilds)
+        guild_count = max(len(guilds), guild_count or 0)
 
     commands = [(None, c) for c in client.global_commands(app_id)]
     if settings.discord_sync_guild_commands and guilds and len(guilds) <= 25:
