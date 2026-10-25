@@ -1,0 +1,11 @@
+{
+  "application_id": "1563890998906724423",
+  "name": "Security X",
+  "short_description": "Full server protection: anti-nuke, anti-raid, AutoMod, jail, consent-based member backups, full server backups and live logs including voice.",
+  "tags": ["security", "moderation", "anti-nuke", "anti-raid", "backups", "verification"],
+  "category": "Security",
+  "pricing_type": "free",
+  "website_url": "https://xotiictech.net",
+  "version": "1.0.0",
+  "featured": true
+}

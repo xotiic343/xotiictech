@@ -22,7 +22,7 @@ from app.models import (
     Testimonial,
 )
 from app.schemas import ContactIn, NewsletterIn, PageViewIn
-from app.serializers import iso, testimonial_out
+from app.serializers import iso, leaf_command_count, testimonial_out
 from app.services import site_settings, storage
 from app.services.email import notify_admin
 
@@ -36,9 +36,11 @@ def _public_bots():
 def live_stats(db: Session) -> dict:
     bots = db.scalars(_public_bots()).all()
     bot_ids = [b.id for b in bots]
+    # Count runnable commands (subcommands included), the same way the bot cards do.
     commands = (
-        db.scalar(
-            select(func.count(BotCommand.id)).where(BotCommand.bot_id.in_(bot_ids), BotCommand.is_hidden.is_(False))
+        sum(
+            leaf_command_count(c)
+            for c in db.scalars(select(BotCommand).where(BotCommand.bot_id.in_(bot_ids), BotCommand.is_hidden.is_(False)))
         )
         if bot_ids
         else 0
