@@ -13,7 +13,12 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "media-src 'self' https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  // Admin uploads go straight from the browser to the storage bucket (presigned URLs), so the bucket's
+  // host must be allowed here. Override with UPLOAD_CONNECT_SRC (space-separated) for another provider.
+  `connect-src 'self' ${
+    process.env.UPLOAD_CONNECT_SRC ||
+    "https://*.supabase.co https://*.r2.cloudflarestorage.com https://*.backblazeb2.com https://*.amazonaws.com"
+  }`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   // discord.com: /support's "Login with Discord" form redirects there for OAuth.

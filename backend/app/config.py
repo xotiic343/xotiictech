@@ -44,7 +44,10 @@ class Settings(BaseSettings):
     s3_private_bucket: str = ""
     s3_public_base_url: str = ""  # https://media.xotiictech.com
     local_storage_dir: str = "./storage"
-    max_upload_mb: int = 200
+    # Size caps. Large files upload straight to the bucket in parts, so these are policy limits, not
+    # technical ones. Your storage provider may still cap file size (Supabase free plan: 50 MB per file).
+    max_media_mb: int = 5120  # images/videos (5 GB)
+    max_upload_mb: int = 51200  # deliverables: zips, installers, ... (50 GB)
 
     # --- email (Resend) ---
     resend_api_key: str = ""
