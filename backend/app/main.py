@@ -15,8 +15,9 @@ from app.routers.admin import auth as admin_auth
 from app.routers.admin import bots as admin_bots
 from app.routers.admin import catalog as admin_catalog
 from app.routers.admin import inbox as admin_inbox
+from app.routers.admin import security as admin_security
 from app.routers.admin import site as admin_site
-from app.routers.public import auth, bots, content, site, store
+from app.routers.public import auth, bots, content, security, site, store
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
 configure_logging()
@@ -68,7 +69,7 @@ app.add_middleware(
     allow_headers=["content-type", "x-csrf-token"],
 )
 
-for r in (site.router, bots.router, store.router, content.router, auth.router):
+for r in (site.router, bots.router, store.router, content.router, auth.router, security.router):
     app.include_router(r, prefix="/api")
 
 for r in (
@@ -80,6 +81,7 @@ for r in (
     admin_catalog.testimonials,
     admin_catalog.uploads,
     admin_inbox.router,
+    admin_security.router,
     admin_site.router,
 ):
     app.include_router(r, prefix="/api")

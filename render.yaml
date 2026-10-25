@@ -88,6 +88,15 @@ services:
       # --- discord: one bot token per bot, comma-separated ---
       - key: DISCORD_BOT_TOKENS
         sync: false
+      # --- Security X (docs/SECURITY_X.md) ---
+      - key: SECURITY_BOT_SECRET # same value as SECURITY_BOT_SECRET in the bot's .env
+        sync: false
+      - key: SECURITY_BOT_TOKEN # Security X bot token: adds consenting members during pulls
+        sync: false
+      - key: SECURITY_CLIENT_ID # Security X application ID (verify page login)
+        sync: false
+      - key: SECURITY_CLIENT_SECRET
+        sync: false
 
   # ---------------------------------------------------------------- Next.js
   - type: web

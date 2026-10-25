@@ -9,6 +9,7 @@ from app.models.content import (
     PortfolioProject,
     Testimonial,
 )
+from app.models.security import PullJob, SecurityGuild, SecurityJob, SecurityLog, SecurityMember
 from app.models.system import AuditLog, PageView, SiteSetting
 from app.models.users import MagicLinkToken, User
 
@@ -35,4 +36,9 @@ __all__ = [
     "SiteSetting",
     "MagicLinkToken",
     "User",
+    "PullJob",
+    "SecurityGuild",
+    "SecurityJob",
+    "SecurityLog",
+    "SecurityMember",
 ]

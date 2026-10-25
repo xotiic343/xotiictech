@@ -21,7 +21,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         h.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
         if settings.is_production:
             h.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-        if request.url.path.startswith(("/api/admin", "/api/auth", "/api/account")):
+        if request.url.path.startswith(("/api/admin", "/api/auth", "/api/account", "/api/security")):
             h["Cache-Control"] = "no-store"
         return response
 

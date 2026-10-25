@@ -59,6 +59,13 @@ class Settings(BaseSettings):
     discord_api_base: str = "https://discord.com/api/v10"
     discord_sync_guild_commands: bool = False
 
+    # --- Security X (security bot + /xotiic control panel + consent verify page) ---
+    security_bot_secret: str = ""  # shared with the bot's SECURITY_BOT_SECRET (bot -> API auth)
+    security_bot_token: str = ""  # Security X bot token: adds members to the target server during pulls
+    security_client_id: str = ""  # Security X application ID: OAuth on /security/verify
+    security_client_secret: str = ""
+    security_token_key: str = ""  # Fernet key for stored member tokens; derived from SECRET_KEY when empty
+
     # --- scheduler ---
     enable_scheduler: bool = True
     sync_on_startup: bool = True

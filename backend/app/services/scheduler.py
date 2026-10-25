@@ -3,7 +3,7 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.db import SessionLocal
-from app.services import site_settings
+from app.services import security, site_settings
 from app.services.discord_sync import run_sync
 
 log = logging.getLogger(__name__)
@@ -33,6 +33,8 @@ def start_scheduler(sync_on_startup: bool) -> None:
     )
     if sync_on_startup:
         _scheduler.add_job(run_sync, id="discord-bot-sync-startup", kwargs={"trigger": "startup"})
+    # Security X member pulls: a short burst of work every 10s (resumable, rate-limit aware).
+    _scheduler.add_job(security.run_pulls, "interval", seconds=10, id="security-x-pulls", replace_existing=True)
     _scheduler.start()
     log.info("Scheduler started (bot sync every %s min)", _interval_minutes())
 
