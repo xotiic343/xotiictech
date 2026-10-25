@@ -40,6 +40,10 @@ class Bot(TimestampMixin, Base):
     last_error: Mapped[str | None] = mapped_column(Text)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+    # ---- pushed by the bot itself (POST /api/bots/stats) ----
+    live_stats: Mapped[list | None] = mapped_column(JSON)  # [{key, label, value, format}]
+    live_stats_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     # ---- admin overrides (take precedence over synced data) ----
     slug: Mapped[str] = mapped_column(String(120), unique=True, index=True)
     display_name: Mapped[str | None] = mapped_column(String(100))

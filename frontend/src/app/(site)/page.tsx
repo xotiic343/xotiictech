@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BotCard, ProductCard, ProjectCard } from "@/components/cards";
+import { BotCard, ProductCard } from "@/components/cards";
 import { FreeToolsBanner } from "@/components/FreeTools";
 import { NewsletterForm } from "@/components/forms";
 import { GlitchText } from "@/components/fx/GlitchText";
@@ -9,16 +9,15 @@ import { StatsBar } from "@/components/StatsBar";
 import { Ticker } from "@/components/Ticker";
 import { SectionHeading, Stars } from "@/components/ui";
 import { apiGet } from "@/lib/backend";
-import type { BotCard as Bot, ProductCard as Product, Project, SiteData } from "@/lib/types";
+import type { BotCard as Bot, ProductCard as Product, SiteData } from "@/lib/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [site, products, bots, projects] = await Promise.all([
+  const [site, products, bots] = await Promise.all([
     apiGet<SiteData>("/site"),
     apiGet<{ items: Product[] }>("/products?featured=true"),
     apiGet<{ items: Bot[] }>("/bots?sort=featured"),
-    apiGet<{ items: Project[] }>("/portfolio?featured=true"),
   ]);
   const hero = site?.hero;
   const featuredTool = site?.free_tools?.enabled ? (site.free_tools.items.find((t) => t.featured) ?? site.free_tools.items[0]) : undefined;
@@ -109,20 +108,6 @@ export default async function HomePage() {
             {bots.items.slice(0, 4).map((b, i) => (
               <Reveal key={b.id} delay={i * 0.05}>
                 <BotCard bot={b} />
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ---------- PORTFOLIO ---------- */}
-      {!!projects?.items.length && (
-        <section className="container-x mt-24">
-          <SectionHeading eyebrow="portfolio" title="Recent work" href="/portfolio" />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.items.slice(0, 3).map((p, i) => (
-              <Reveal key={p.id} delay={i * 0.05}>
-                <ProjectCard project={p} />
               </Reveal>
             ))}
           </div>

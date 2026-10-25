@@ -1,0 +1,127 @@
+// Support system database (/support), used only by the Next.js frontend.
+//
+// It lives in its own Postgres schema ("support", set by ?schema=support in the URLs), so it can sit in
+// the same Supabase project as the FastAPI backend without touching the backend's tables.
+//
+// Ticket X (the Discord bot) is the source of truth for Discord-side ticket channels. The bot runs on
+// SQLite and syncs into the Ticket / TicketMessage mirror over HTTP (see docs/SUPPORT.md).
+// state, priority, category and source are plain Strings (not enums), so a new value added by the bot
+// never breaks the site.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Supabase transaction pooler (port 6543, ?pgbouncer=true&schema=support): used at runtime.
+  url       = env("SUPPORT_DATABASE_URL")
+  // Supabase session pooler (port 5432, ?schema=support): used for prisma db push.
+  directUrl = env("SUPPORT_DIRECT_URL")
+}
+
+// Discord users who have logged in to /support. Keyed by Discord snowflake.
+model User {
+  discordId   String   @id
+  username    String
+  globalName  String?
+  avatar      String?
+  lastLoginAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+// Mirror of a Ticket X ticket.
+model Ticket {
+  id              String    @id @default(cuid())
+  guildId         String
+  number          Int // per-guild ticket number shown to users (#0001)
+  channelId       String?   @unique
+  openerId        String
+  openerName      String?
+  category        String
+  subject         String?
+  description     String?   @db.Text
+  state           String    @default("open") // open | claimed | pending | closed
+  priority        String    @default("normal") // low | normal | high | urgent
+  claimedById     String?
+  assigneeId      String?
+  closedById      String?
+  closeReason     String?
+  source          String    @default("bot") // bot | web
+  firstResponseAt DateTime?
+  closedAt        DateTime?
+  lastActivityAt  DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  messages TicketMessage[]
+  notes    StaffNote[]
+
+  @@unique([guildId, number])
+  @@index([openerId, createdAt])
+  @@index([state, lastActivityAt])
+  @@index([createdAt])
+}
+
+// One message in a ticket. discordMessageId keeps syncing idempotent.
+model TicketMessage {
+  id               String   @id @default(cuid())
+  ticketId         String
+  ticket           Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  discordMessageId String?  @unique
+  authorId         String
+  authorName       String
+  isStaff          Boolean  @default(false)
+  source           String   @default("discord") // discord | web | system
+  content          String   @db.Text
+  attachments      Json?
+  createdAt        DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+// Internal staff notes. Never sent to Discord.
+model StaffNote {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorName String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+// Every staff action and important bot event.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String // Discord ID, or "bot" / "system"
+  actorName String?
+  action    String // e.g. ticket.claim, ticket.close, note.create
+  ticketId  String?
+  targetId  String?
+  source    String   @default("web") // web | bot
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([ticketId])
+}
+
+// Categories offered on the "Open a ticket" form. Seeded by prisma/seed-support.mjs.
+model TicketCategory {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  label       String
+  description String?
+  enabled     Boolean @default(true)
+  sortOrder   Int     @default(0)
+}
+
+// Last heartbeat per bot (key = the botKey the bot sends, e.g. "ticket-bot"). Drives the online dot.
+model BotHeartbeat {
+  key        String   @id
+  lastSeenAt DateTime
+}

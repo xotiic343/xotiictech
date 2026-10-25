@@ -151,7 +151,7 @@ def fresh_download_link(request: Request, order_id: str, db: Session = Depends(g
     order = _own_order(db, user, order_id)
     if order.status != "paid":
         raise HTTPException(400, "Order is not paid")
-    if not order.product or not order.product.deliverable_key:
+    if not order.product or not order.product.has_download:
         raise HTTPException(400, "This product has no downloadable file")
     # A signed-in buyer can always re-download: re-open the window from now.
     order_service.refresh_download_window(db, order)

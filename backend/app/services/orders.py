@@ -157,7 +157,7 @@ def resolve_download(db: Session, token: str) -> tuple[Order | None, str | None]
     max_downloads = int(site_settings.get_setting(db, "max_downloads_per_order") or 0)
     if max_downloads and order.download_count >= max_downloads:
         return None, "Download limit reached for this order. Contact support."
-    if not order.product or not order.product.deliverable_key:
+    if not order.product or not order.product.has_download:
         return None, "This product has no downloadable file (hosted/custom products are delivered manually)."
     return order, None
 
@@ -168,7 +168,7 @@ def refresh_download_window(db: Session, order: Order) -> None:
 
 
 def send_order_email(db: Session, order: Order) -> bool:
-    has_file = bool(order.product and order.product.deliverable_key)
+    has_file = bool(order.product and order.product.has_download)
     expires = _aware(order.download_expires_at)
     fmt = {
         "product": order.product_name,

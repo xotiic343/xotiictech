@@ -109,7 +109,7 @@ def checkout_result(request: Request, session_id: str, db: Session = Depends(get
                 db.refresh(order)
         except stripe.StripeError:
             log.warning("Could not reconcile checkout session")
-    has_file = bool(order.product and order.product.deliverable_key)
+    has_file = bool(order.product and order.product.has_download)
     return {
         "status": order.status,
         "product_name": order.product_name,
@@ -134,6 +134,9 @@ def download(request: Request, token: str, db: Session = Depends(get_db)):
     product = order.product
     order.download_count += 1
     db.commit()
+    if not product.deliverable_key:
+        # Link-based delivery (large files hosted on Drive/MEGA/etc.)
+        return RedirectResponse(product.external_download_url, status_code=302)
     url = storage.private_download_url(product.deliverable_key, product.deliverable_filename or "download")
     if url:
         return RedirectResponse(url, status_code=302)

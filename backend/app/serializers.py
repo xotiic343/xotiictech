@@ -9,7 +9,6 @@ from app.models import (
     BotCommand,
     DocPage,
     Order,
-    PortfolioProject,
     Product,
     Review,
     Testimonial,
@@ -76,6 +75,8 @@ def bot_detail(b: Bot, product: Product | None, reviews: list[Review]) -> dict:
         "version": b.version,
         "changelog": b.changelog,
         "last_synced_at": iso(b.last_synced_at),
+        "live_stats": b.live_stats or [],
+        "live_stats_at": iso(b.live_stats_at),
         "commands": [command_out(c) for c in b.commands if not c.is_hidden],
         "product": product_card(product) if product and product.is_published else None,
         "reviews": [review_out(r) for r in reviews],
@@ -128,7 +129,7 @@ def product_detail(p: Product) -> dict:
         "features": p.features or [],
         "media": p.media or [],
         "changelog": p.changelog,
-        "has_download": bool(p.deliverable_key),
+        "has_download": p.has_download,
         "sales_count": p.sales_count,
         "created_at": iso(p.created_at),
     }
@@ -155,7 +156,7 @@ def order_buyer(o: Order) -> dict:
         "status": o.status,
         "paid_at": iso(o.paid_at),
         "download_expires_at": iso(o.download_expires_at),
-        "has_download": bool(o.product and o.product.deliverable_key),
+        "has_download": bool(o.product and o.product.has_download),
         "is_hosted": bool(o.product and o.product.sell_type == "hosted"),
         "hosting_status": o.hosting_status,
         "hosting_server_id": o.hosting_server_id,
@@ -163,11 +164,6 @@ def order_buyer(o: Order) -> dict:
 
 
 # ---------------- content ----------------
-
-
-def portfolio_out(p: PortfolioProject, full: bool = False) -> dict:
-    d = columns(p, exclude=set() if full else {"body"})
-    return d
 
 
 def blog_out(p: BlogPost, full: bool = False) -> dict:

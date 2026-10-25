@@ -95,7 +95,9 @@ services:
     runtime: node
     plan: starter
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    # npm install (not npm ci): /support added dependencies. support:setup creates the /support tables
+    # and skips itself when SUPPORT_DATABASE_URL isn't set, so it can never block the main site's deploy.
+    buildCommand: npm install && npm run support:setup && npm run build
     startCommand: npm start
     healthCheckPath: /
     domains:
@@ -115,3 +117,26 @@ services:
           type: web
           name: xotiictech-api
           property: hostport
+      # --- /support (Discord login + tickets). Setup guide: docs/SUPPORT.md ---
+      - key: SUPPORT_DATABASE_URL # Supabase transaction pooler, port 6543, ?pgbouncer=true&schema=support
+        sync: false
+      - key: SUPPORT_DIRECT_URL # Supabase session pooler, port 5432, ?schema=support
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_BOT_TOKEN # Ticket X token: role checks, channel history, member count
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      - key: STAFF_ROLE_ID
+        sync: false
+      - key: BOT_HEARTBEAT_SECRET # must equal BOT_HEARTBEAT_SECRET in the bot's .env
+        sync: false
+      - key: BOT_API_URL
+        sync: false
+      - key: BOT_API_SECRET
+        sync: false

@@ -1,15 +1,18 @@
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.config import settings
 from app.core.deps import get_current_user
 from app.core.net import client_ip
 from app.core.ratelimit import limiter
+from app.core.security import sha256_hex
 from app.db import get_db
-from app.models import Bot, BotInquiry, Order, Product, Review, User
-from app.schemas import CommissionIn, ReviewIn
+from app.models import Bot, BotInquiry, DiscordToken, Order, Product, Review, User
+from app.schemas import BotStatsIn, CommissionIn, ReviewIn
 from app.serializers import bot_card, bot_detail
 from app.services import site_settings
 from app.services.email import notify_admin
@@ -60,6 +63,27 @@ def bot_stats(db: Session = Depends(get_db)):
         "total_servers": s["servers_reached"],
         "total_commands": s["total_commands"],
     }
+
+
+@router.post("/stats")
+@limiter.limit("12/minute")
+def push_bot_stats(request: Request, body: BotStatsIn, db: Session = Depends(get_db)):
+    """A bot reports its own totals. Auth: `Authorization: Bot <its token>`, which must be one of the
+    tokens in DISCORD_BOT_TOKENS, so there's no extra secret to manage. Also counts as a heartbeat."""
+    auth = request.headers.get("authorization", "")
+    token = auth[4:].strip() if auth[:4].lower() == "bot " else ""
+    fingerprint = sha256_hex(token) if token else ""
+    if not token or fingerprint not in {sha256_hex(t) for t in settings.discord_tokens}:
+        raise HTTPException(401, "Unknown bot token: add it to DISCORD_BOT_TOKENS on the API")
+    record = db.scalar(select(DiscordToken).where(DiscordToken.fingerprint == fingerprint))
+    bot = db.scalar(select(Bot).where(Bot.discord_id == record.bot_discord_id)) if record and record.bot_discord_id else None
+    if not bot:
+        raise HTTPException(409, "Bot not imported yet: press Sync now in /xotiic → Bots, then retry")
+    bot.live_stats = [s.model_dump() for s in body.stats]
+    bot.live_stats_at = datetime.now(timezone.utc)
+    bot.status = "online"
+    db.commit()
+    return {"ok": True, "bot": bot.slug}
 
 
 @router.post("/inquiries", status_code=201)

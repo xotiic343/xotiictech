@@ -5,36 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import BlogPost, DocPage, PortfolioProject
-from app.serializers import blog_out, doc_out, portfolio_out
+from app.models import BlogPost, DocPage
+from app.serializers import blog_out, doc_out
 
 router = APIRouter(tags=["content"])
-
-
-@router.get("/portfolio")
-def list_portfolio(
-    db: Session = Depends(get_db),
-    category: str | None = Query(None, max_length=60),
-    featured: bool = False,
-):
-    stmt = select(PortfolioProject).where(PortfolioProject.is_published.is_(True))
-    if category:
-        stmt = stmt.where(PortfolioProject.category == category)
-    if featured:
-        stmt = stmt.where(PortfolioProject.is_featured.is_(True))
-    items = db.scalars(stmt.order_by(PortfolioProject.sort_order, PortfolioProject.created_at.desc())).all()
-    categories = sorted(
-        {c for c in db.scalars(select(PortfolioProject.category).where(PortfolioProject.is_published.is_(True))) if c}
-    )
-    return {"items": [portfolio_out(p) for p in items], "categories": categories}
-
-
-@router.get("/portfolio/{slug}")
-def get_portfolio(slug: str, db: Session = Depends(get_db)):
-    p = db.scalar(select(PortfolioProject).where(PortfolioProject.slug == slug, PortfolioProject.is_published.is_(True)))
-    if not p:
-        raise HTTPException(404, "Project not found")
-    return portfolio_out(p, full=True)
 
 
 @router.get("/blog")

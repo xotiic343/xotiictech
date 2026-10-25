@@ -26,6 +26,9 @@ class Product(TimestampMixin, Base):
     media: Mapped[list] = mapped_column(JSON, default=list)  # [{type: image|video, url, alt}]
     deliverable_key: Mapped[str | None] = mapped_column(String(500))  # private bucket object key
     deliverable_filename: Mapped[str | None] = mapped_column(String(255))
+    # Alternative to an uploaded file: an external link (Google Drive, MEGA, Dropbox…) for large files.
+    # Never shown publicly; buyers are redirected to it through the signed download token.
+    external_download_url: Mapped[str | None] = mapped_column(String(1000))
     version: Mapped[str | None] = mapped_column(String(40))
     changelog: Mapped[str | None] = mapped_column(Text)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
@@ -36,6 +39,10 @@ class Product(TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     bot = relationship("Bot", lazy="joined")
+
+    @property
+    def has_download(self) -> bool:
+        return bool(self.deliverable_key or self.external_download_url)
 
 
 class Order(TimestampMixin, Base):

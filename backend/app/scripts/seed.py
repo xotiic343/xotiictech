@@ -1,4 +1,4 @@
-"""Seed sample content: product, bot, blog post, portfolio item, docs, testimonial, legal pages.
+"""Seed sample content: product, bot, blog post, docs, testimonial, legal pages.
 
     python -m app.scripts.seed
 
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from app.db import SessionLocal
-from app.models import BlogPost, Bot, BotCommand, DocPage, PortfolioProject, Product, Testimonial
+from app.models import BlogPost, Bot, BotCommand, DocPage, Product, Testimonial
 from app.services import site_settings
 
 NOW = datetime.now(timezone.utc)
@@ -125,15 +125,6 @@ def main() -> None:
             features=["discord.py 2.x", "PostgreSQL storage", "Docker-ready", "Slash commands"],
             category="discord_bots", sell_type="source_code", price_cents=2999, currency="usd",
             version="1.4.0", is_published=True, is_featured=True, is_bot=True, bot_id=bot.id, media=[],
-        )
-        upsert_by_slug(
-            db, PortfolioProject, "r6xscan",
-            title="R6XScan — Rainbow Six Siege PC Checker",
-            summary="Free web tool that checks whether your PC is ready for Rainbow Six Siege.",
-            body="A free scanner that checks your specs and setup for Rainbow Six Siege.\n\n"
-            "[Try it →](https://r6xscan.vercel.app/)",
-            category="Web Tools", stack=["Next.js", "Vercel", "TypeScript"],
-            live_url="https://r6xscan.vercel.app/", is_featured=True, is_published=True, media=[],
         )
         upsert_by_slug(
             db, BlogPost, "hello-world",

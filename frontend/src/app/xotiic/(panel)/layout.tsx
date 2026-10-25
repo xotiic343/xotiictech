@@ -12,7 +12,6 @@ const NAV: [string, string][] = [
   ["/xotiic/inquiries", "Commissions"],
   ["/xotiic/orders", "Orders"],
   ["/xotiic/products", "Products"],
-  ["/xotiic/portfolio", "Portfolio"],
   ["/xotiic/blog", "Blog"],
   ["/xotiic/docs", "Docs / FAQ"],
   ["/xotiic/testimonials", "Testimonials"],

@@ -80,8 +80,19 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> list[str]:
-        extra = [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
-        return list(dict.fromkeys([self.frontend_url.rstrip("/"), *extra]))
+        """FRONTEND_URL + CORS_ORIGINS, normalized; each domain is allowed with and without `www.`."""
+        out: list[str] = []
+        for raw in [self.frontend_url, *self.cors_origins.split(",")]:
+            o = raw.strip().strip('"').strip("'").rstrip("/").lower()
+            if not o:
+                continue
+            if "://" not in o:
+                o = f"https://{o}"
+            scheme, host = o.split("://", 1)
+            host = host.split("/", 1)[0]  # drop any path
+            bare = host.removeprefix("www.")
+            out += [f"{scheme}://{bare}", f"{scheme}://www.{bare}"]
+        return list(dict.fromkeys(out))
 
     @property
     def admin_ips(self) -> set[str]:

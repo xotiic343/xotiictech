@@ -2,6 +2,8 @@
 
 Retro-terminal storefront and platform for XotiicTech. Discord bots are auto-imported straight from Discord, there's a store with instant Stripe delivery, a portfolio, blog, docs and buyer accounts, plus a 2FA-protected admin panel at `/xotiic`.
 
+`/support` is the Xotiic Support ticket system: Discord login, tickets synced with the Ticket X bot, and a staff panel at `/support/exotic`. It runs in the Next.js frontend. See [docs/SUPPORT.md](docs/SUPPORT.md).
+
 ```
 backend/   FastAPI · SQLAlchemy 2 · Alembic · APScheduler · Stripe · R2 (boto3) · Resend
 frontend/  Next.js 15 (App Router) · Tailwind · Framer Motion · zod

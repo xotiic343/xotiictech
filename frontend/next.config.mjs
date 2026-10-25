@@ -16,7 +16,8 @@ const csp = [
   "connect-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com",
+  // discord.com: /support's "Login with Discord" form redirects there for OAuth.
+  "form-action 'self' https://checkout.stripe.com https://discord.com",
   "object-src 'none'",
 ].join("; ");
 
@@ -26,6 +27,7 @@ const nextConfig = {
   poweredByHeader: false,
   eslint: { ignoreDuringBuilds: true },
   // Same-origin proxy: browser → xotiictech.com/api/* → FastAPI (keeps auth cookies first-party).
+  // /support's own API lives at /support/api/* (Next.js route handlers), so it never hits this proxy.
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
@@ -43,6 +45,8 @@ const nextConfig = {
         ],
       },
       { source: "/xotiic/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/support/exotic/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/support/api/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] },
     ];
   },
 };

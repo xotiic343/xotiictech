@@ -30,7 +30,11 @@ export type BotCommand = {
 
 export type Review = { id: number; author: string; rating: number; body: string; created_at: string };
 
+export type LiveStat = { key: string; label: string; value: number; format: "number" | "duration_ms" | "rating" | "percent" };
+
 export type BotDetail = BotCard & {
+  live_stats: LiveStat[];
+  live_stats_at: string | null;
   long_description: string;
   media: Media[];
   support_url: string | null;
@@ -69,21 +73,6 @@ export type ProductDetail = ProductCard & {
   has_download: boolean;
   sales_count: number;
   created_at: string;
-};
-
-export type Project = {
-  id: number;
-  slug: string;
-  title: string;
-  summary: string;
-  body?: string;
-  category: string | null;
-  stack: string[];
-  cover_image: string | null;
-  media: Media[];
-  live_url: string | null;
-  repo_url: string | null;
-  is_featured: boolean;
 };
 
 export type Post = {

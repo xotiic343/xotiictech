@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StatusDot } from "@/components/ui";
 import { CATEGORY_LABELS, compact, money } from "@/lib/format";
-import type { BotCard as Bot, ProductCard as Product, Project } from "@/lib/types";
+import type { BotCard as Bot, ProductCard as Product } from "@/lib/types";
 
 export function BotCard({ bot }: { bot: Bot }) {
   return (
@@ -94,46 +94,6 @@ export function ProductCard({ product }: { product: Product }) {
           <span className="font-display text-lg font-bold text-blood glow-text">{money(product.price_cents, product.currency)}</span>
           <span className="text-[11px] uppercase tracking-wider text-dim">{product.version ? `v${product.version}` : ""}</span>
         </div>
-      </div>
-    </Link>
-  );
-}
-
-export function ProjectCard({ project }: { project: Project }) {
-  const cover = project.cover_image || project.media.find((m) => m.type === "image")?.url;
-  return (
-    <Link href={`/portfolio/${project.slug}`} className="card card-hover group flex h-full flex-col overflow-hidden">
-      <div className="relative aspect-[16/10] overflow-hidden border-b border-line bg-panel">
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cover}
-            alt=""
-            className="h-full w-full object-cover opacity-80 transition duration-500 group-hover:scale-105 group-hover:opacity-100"
-            loading="lazy"
-          />
-        ) : (
-          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_30%_30%,rgba(230,0,0,.25),transparent_60%)] font-display text-3xl font-black text-white/20">
-            {project.title.slice(0, 3).toUpperCase()}
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black via-black/30 to-transparent p-4 opacity-0 transition group-hover:opacity-100">
-          <span className="text-xs uppercase tracking-[0.2em] text-blood">Open project →</span>
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col p-5">
-        {project.category && <div className="eyebrow mb-1">{project.category}</div>}
-        <div className="aberrate-child font-display text-base font-bold uppercase tracking-wide text-white">{project.title}</div>
-        <p className="mt-2 line-clamp-2 flex-1 text-sm text-muted">{project.summary}</p>
-        {project.stack.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {project.stack.slice(0, 5).map((s) => (
-              <span key={s} className="tag">
-                {s}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </Link>
   );

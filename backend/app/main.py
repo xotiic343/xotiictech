@@ -75,7 +75,6 @@ for r in (
     admin_auth.router,
     admin_bots.router,
     admin_catalog.products,
-    admin_catalog.portfolio,
     admin_catalog.blog,
     admin_catalog.docs,
     admin_catalog.testimonials,

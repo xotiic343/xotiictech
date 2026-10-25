@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { BotCard, ProductCard, ProjectCard } from "@/components/cards";
+import { BotCard, ProductCard } from "@/components/cards";
 import { EmptyState } from "@/components/ui";
-import type { BotCard as Bot, ProductCard as Product, Project } from "@/lib/types";
+import type { BotCard as Bot, ProductCard as Product } from "@/lib/types";
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -158,38 +158,6 @@ export function StoreExplorer({
         </Grid>
       ) : (
         <EmptyState title="Nothing here yet">No products match those filters.</EmptyState>
-      )}
-    </div>
-  );
-}
-
-export function PortfolioExplorer({ projects, categories }: { projects: Project[]; categories: string[] }) {
-  const [category, setCategory] = useState<string | null>(null);
-  const items = category ? projects.filter((p) => p.category === category) : projects;
-  return (
-    <div>
-      {categories.length > 0 && (
-        <div className="mb-8 flex flex-wrap gap-2">
-          <Chip active={!category} onClick={() => setCategory(null)}>
-            All
-          </Chip>
-          {categories.map((c) => (
-            <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
-              {c}
-            </Chip>
-          ))}
-        </div>
-      )}
-      {items.length ? (
-        <Grid>
-          {items.map((p) => (
-            <Cell key={p.id} id={p.id}>
-              <ProjectCard project={p} />
-            </Cell>
-          ))}
-        </Grid>
-      ) : (
-        <EmptyState title="No projects yet" />
       )}
     </div>
   );

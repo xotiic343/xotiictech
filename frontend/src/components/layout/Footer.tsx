@@ -37,8 +37,8 @@ export function Footer({ site }: { site: SiteData | null }) {
             ["/store", "Store"],
             ["/bots", "Discord Bots"],
             ["/bots/commission", "Commission a bot"],
-            ["/portfolio", "Portfolio"],
             ["/account", "My purchases"],
+            ["/support", "Support tickets"],
           ]}
         />
         <FooterCol

@@ -8,7 +8,7 @@ import { Markdown } from "@/components/Markdown";
 import { MediaGallery } from "@/components/MediaGallery";
 import { Stars, StatusDot } from "@/components/ui";
 import { apiGet } from "@/lib/backend";
-import { compact, date, timeAgo } from "@/lib/format";
+import { compact, date, statValue, timeAgo } from "@/lib/format";
 import type { BotDetail } from "@/lib/types";
 
 export const revalidate = 60;
@@ -64,6 +64,25 @@ export default async function BotPage({ params }: Props) {
           </div>
 
           <p className="mt-6 max-w-3xl text-base text-neutral-300">{bot.description}</p>
+
+          {bot.live_stats.length > 0 && (
+            <section className="mt-10">
+              <div className="mb-4 flex items-end justify-between">
+                <h2 className="h-display text-xl">
+                  Live stats <span className="ml-1 inline-block h-2 w-2 animate-pulse-dot rounded-full bg-ok align-middle" />
+                </h2>
+                <span className="text-[11px] uppercase tracking-wider text-dim">reported {timeAgo(bot.live_stats_at)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {bot.live_stats.map((s) => (
+                  <div key={s.key} className="card corner-brackets px-4 py-5 text-center">
+                    <div className="font-display text-2xl font-black text-white glow-text">{statValue(s.value, s.format)}</div>
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {bot.media.length > 0 && (
             <section className="mt-10">

@@ -21,8 +21,8 @@ export default async function AboutPage() {
             <Link href="/bots/commission" className="btn-primary">
               Work with me
             </Link>
-            <Link href="/portfolio" className="btn-ghost">
-              See the work
+            <Link href="/store" className="btn-ghost">
+              Browse the store
             </Link>
           </div>
         </div>

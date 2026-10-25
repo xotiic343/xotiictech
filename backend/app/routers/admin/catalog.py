@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.deps import AdminContext, require_admin
 from app.db import get_db
-from app.models import BlogPost, Bot, DocPage, PortfolioProject, Product, Testimonial
+from app.models import BlogPost, Bot, DocPage, Product, Testimonial
 from app.routers.admin.crud import crud_router
-from app.schemas import BlogIn, DocIn, PortfolioIn, ProductIn, TestimonialIn
-from app.serializers import blog_out, doc_out, portfolio_out, product_admin, testimonial_out
+from app.schemas import BlogIn, DocIn, ProductIn, TestimonialIn
+from app.serializers import blog_out, doc_out, product_admin, testimonial_out
 from app.services import storage
 from app.services.audit import audit
 
@@ -34,11 +34,6 @@ def _doc_hook(db: Session, obj: DocPage, data: DocIn, is_new: bool) -> None:
 products = crud_router(
     path="products", model=Product, schema=ProductIn, serialize=product_admin, entity="product",
     order_by=(Product.sort_order, Product.created_at.desc()), slug_source="name", before_save=_product_hook,
-)
-portfolio = crud_router(
-    path="portfolio", model=PortfolioProject, schema=PortfolioIn,
-    serialize=lambda p: portfolio_out(p, full=True), entity="portfolio",
-    order_by=(PortfolioProject.sort_order, PortfolioProject.created_at.desc()), slug_source="title",
 )
 blog = crud_router(
     path="blog", model=BlogPost, schema=BlogIn, serialize=lambda p: blog_out(p, full=True), entity="blog_post",

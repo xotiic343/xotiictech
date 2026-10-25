@@ -35,6 +35,9 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if request.method not in ("GET", "HEAD", "OPTIONS") and not request.url.path.startswith(self.EXEMPT_PREFIXES):
             origin = request.headers.get("origin")
-            if origin and origin.rstrip("/") not in settings.allowed_origins:
-                return JSONResponse({"detail": "Origin not allowed"}, status_code=403)
+            if origin and origin.rstrip("/").lower() not in settings.allowed_origins:
+                return JSONResponse(
+                    {"detail": f"Origin {origin[:100]} not allowed: set FRONTEND_URL on the API service to this address"},
+                    status_code=403,
+                )
         return await call_next(request)

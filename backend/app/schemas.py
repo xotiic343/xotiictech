@@ -1,4 +1,4 @@
-﻿"""Pydantic request models. Every write endpoint validates through one of these."""
+"""Pydantic request models. Every write endpoint validates through one of these."""
 
 from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
@@ -80,6 +80,20 @@ class PageViewIn(Strict):
     referrer: Annotated[str, StringConstraints(max_length=500)] | None = None
 
 
+class LiveStat(Strict):
+    key: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]{1,40}$")]
+    label: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+    value: float = Field(ge=0, le=1e15)
+    # number: 1,234 · duration_ms: 3m 12s · rating: 4.8 / 5 · percent: 97%
+    format: Literal["number", "duration_ms", "rating", "percent"] = "number"
+
+
+class BotStatsIn(Strict):
+    """Totals a bot reports about itself. Aggregates only, never per-server or per-user data."""
+
+    stats: list[LiveStat] = Field(max_length=12)
+
+
 class HostingRequestIn(Strict):
     server_id: DiscordId
 
@@ -128,6 +142,7 @@ class ProductIn(Strict):
     media: list[MediaItem] = Field(default_factory=list, max_length=30)
     deliverable_key: Annotated[str, StringConstraints(max_length=500)] | None = None
     deliverable_filename: Annotated[str, StringConstraints(max_length=255)] | None = None
+    external_download_url: Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)] | None = None
     version: Annotated[str, StringConstraints(max_length=40)] | None = None
     changelog: Annotated[str, StringConstraints(max_length=50_000)] | None = None
     is_published: bool = False
@@ -135,6 +150,11 @@ class ProductIn(Strict):
     is_bot: bool = False
     bot_id: int | None = None
     sort_order: int = 0
+
+    @field_validator("external_download_url")
+    @classmethod
+    def _check_download_url(cls, v: Any) -> Any:
+        return _url_or_empty(v)
 
 
 class ProductPatch(ProductIn):
@@ -193,27 +213,6 @@ class ReviewPatch(Strict):
 
 
 # ---------------- admin: content ----------------
-
-
-class PortfolioIn(Strict):
-    slug: Slug | None = None
-    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
-    summary: Annotated[str, StringConstraints(max_length=400)] = ""
-    body: Annotated[str, StringConstraints(max_length=50_000)] = ""
-    category: Annotated[str, StringConstraints(max_length=60)] | None = None
-    stack: list[Annotated[str, StringConstraints(max_length=40)]] = Field(default_factory=list, max_length=30)
-    cover_image: str | None = None
-    media: list[MediaItem] = Field(default_factory=list, max_length=30)
-    live_url: str | None = None
-    repo_url: str | None = None
-    is_featured: bool = False
-    is_published: bool = False
-    sort_order: int = 0
-
-    @field_validator("cover_image", "live_url", "repo_url")
-    @classmethod
-    def _check_urls(cls, v: Any) -> Any:
-        return _url_or_empty(v)
 
 
 class BlogIn(Strict):

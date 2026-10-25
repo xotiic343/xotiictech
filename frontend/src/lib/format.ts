@@ -28,6 +28,31 @@ export function timeAgo(iso: string | null | undefined): string {
   return `${Math.round(s / 86400)}d ago`;
 }
 
+export function duration(ms: number): string {
+  if (!ms || ms < 1000) return ms ? "<1s" : "—";
+  const s = Math.round(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+export function statValue(value: number, format: string): string {
+  switch (format) {
+    case "duration_ms":
+      return duration(value);
+    case "rating":
+      return value ? `${value.toFixed(1)} / 5` : "—";
+    case "percent":
+      return `${Math.round(value)}%`;
+    default:
+      return compact(value);
+  }
+}
+
 export const CATEGORY_LABELS: Record<string, string> = {
   source_code: "Source Code",
   discord_bots: "Discord Bots",
