@@ -135,279 +135,201 @@ Full step-by-step instructions are on the **[Setup Guide](/vendingx/setup)**.
 5. Future updates are free — re-download anytime from your account
 """
 
-# ── Doc page bodies ──
+# ── Doc page bodies (customer-facing) ──
 
-DOC_VENDINGX_OVERVIEW = """\
-## What is Vending X?
+DOC_GETTING_STARTED = """\
+## Welcome to XotiicTech
 
-Vending X is a Discord bot that turns your server into a digital vending machine. \
-Load items (accounts, keys, links, codes) into text files, and your members can \
-dispense them through an interactive vending machine interface.
+Thanks for your purchase! Here's how to get started.
 
-### Two Tiers
+### 1. Check Your Email
 
-- **Beta** — Free items anyone in the server can vend
-- **Premium** — Items gated behind a premium role (purchasable via Stripe or assigned manually)
+After payment, you'll receive a confirmation email with a download link. \
+The link is valid for a limited time — if it expires, you can always get a fresh one from your account.
 
-### Key Features
+### 2. Sign In to Your Account
 
-- Interactive vending machine UI with buttons and dropdown menus
-- Stock is dispensed privately via DM
-- Auto-update panels that show live stock counts in designated channels
-- Built-in cooldowns to prevent spam
-- Full audit logging of every dispense
-- Premium role gating with Stripe integration
+Go to [My Account](/account) and sign in with the same email you used at checkout. \
+From there you can:
 
-### Getting Started
+- Re-download any product you've purchased
+- View your order history
+- Access your license keys
 
-- **Use the bot on our server**: Join the [XotiicTech Discord](https://discord.gg/xotiictech) and use `/vend`
-- **Use it on the website**: Visit [xotiictech.net/vendingx](/vendingx) to vend directly from the web
-- **Run your own**: Purchase [Bot Access](/store/vendingx-bot-access) for the full source code
+### 3. Need Help?
+
+- Browse the [Docs & FAQ](/docs) for answers to common questions
+- Join the [XotiicTech Discord](https://discord.gg/xotiictech) for live support
+- Use the [Contact](/contact) page to reach us directly
 """
 
-DOC_VENDINGX_SETUP = """\
-## Setting Up Vending X
+DOC_HOW_TO_PURCHASE = """\
+## How to Buy
 
-This guide covers setting up your own Vending X bot after purchasing Bot Access.
+All purchases on XotiicTech are handled securely through **Stripe**.
 
-### 1. Create a Discord Application
+### Steps
 
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
-2. Click **New Application** and name it
-3. Go to the **Bot** tab and click **Reset Token** — save the token securely
-4. Enable all three **Privileged Gateway Intents** (Presence, Server Members, Message Content)
-5. Go to **OAuth2 > URL Generator**, select `bot` + `applications.commands`
-6. Under Bot Permissions select: Send Messages, Embed Links, Attach Files, Read Message History, Use Slash Commands, Manage Roles
-7. Copy the URL and invite the bot to your server
+1. Find a product in the [Store](/store)
+2. Click **Buy Now** on the product page
+3. Complete checkout — we accept all major credit/debit cards
+4. You'll be redirected to a confirmation page with your download link
+5. A confirmation email is also sent to the email you provide at checkout
 
-### 2. Configure Environment Variables
+### After Purchase
 
-Create a `.env` file in the bot root:
+Your product is available immediately. Digital downloads can be accessed from the \
+confirmation page or from your [Account](/account) page at any time.
 
-```
-DISCORD_BOT_TOKEN=your_token_here
-BOT_OWNER_ID=your_discord_user_id
-MAIN_SERVER_ID=your_server_id
-PREMIUM_ROLE_ID=your_premium_role_id
-```
+### Refunds
 
-### 3. Add Stock
-
-Drop `.txt` files into the `stock/` folder. One item per line. \
-Files prefixed with `premium_` require premium access.
-
-```
-stock/epicgames.txt      → free tier
-stock/premium_nitro.txt  → premium only
-```
-
-### 4. Run the Bot
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
-The bot syncs slash commands on startup. Use `/vending beta` or `/vending premium` to post a panel.
-
-### 5. Host on Discloud
-
-See the [Discloud Hosting Guide](/docs/vendingx-discloud) for step-by-step instructions.
+All sales are final once the file has been downloaded. If you haven't downloaded yet, \
+you can request a refund within 14 days. See our [Refund Policy](/legal/refund_policy) for details.
 """
 
-DOC_VENDINGX_COMMANDS = """\
-## Vending X Command Reference
+DOC_ACCOUNT = """\
+## Your Account
 
-All commands are Discord slash commands. They sync automatically when the bot starts.
+Your XotiicTech account is created automatically when you make your first purchase.
 
-### Public Commands
+### Signing In
 
-Users interact with the vending machine through the **button and dropdown UI** posted by `/vending`. \
-There are no public slash commands — vending is done through the interactive panels.
+Sign in at [/account](/account) using the email address you used at checkout. \
+We use a secure magic-link system — no password needed.
 
-### Admin Commands
+### What You Can Do
 
-| Command | Description |
-|---------|-------------|
-| `/vending <tier>` | Post a vending machine panel. Choose `beta` (free) or `premium` (role-gated). |
-| `/setbuy` | Post the pricing embed with buttons linking to Stripe checkout. |
-| `/setup` | Configure auto-update channels, roles, and notification settings. |
+- **View orders** — See all your past purchases and their status
+- **Re-download** — Generate fresh download links for any product
+- **Access licenses** — View license keys and activation details
 
-### Owner Commands
+### Trouble Signing In?
 
-| Command | Description |
-|---------|-------------|
-| `/addstock <file>` | Upload a `.txt` file attachment to add items to stock. The filename becomes the stock type. |
-| `/clearstock <type>` | Remove all items for a stock type. |
-| `/panel` | View a dashboard showing total stock, dispensed counts, and bot stats. |
-
-### Notes
-
-- **Admin** commands require the `Administrator` permission in Discord
-- **Owner** commands are restricted to the bot owner (`BOT_OWNER_ID` in `.env`)
-- Stock type names are derived from filenames: `epicgames.txt` → type `epicgames`
-- Premium types must be prefixed with `premium_`: `premium_nitro.txt`
+Make sure you're using the same email you entered during checkout. \
+If you still can't access your account, [contact us](/contact) and we'll sort it out.
 """
 
-DOC_VENDINGX_STOCK = """\
-## Managing Stock
+DOC_VENDING_X = """\
+## Using Vending X
 
-Stock is the inventory your vending machine dispenses. Each stock type is a text file in the `stock/` folder.
+Vending X is a free digital vending machine where you can grab items like game accounts, \
+gift links, and other digital goods.
 
-### File Format
+### On the Website
 
-One item per line. Each line is one dispensable unit:
+Visit [xotiictech.net/vendingx](/vendingx) to use the vending machine directly from your browser.
 
-```
-email1@example.com:password123
-email2@example.com:password456
-email3@example.com:password789
-```
+1. Sign in with your Discord account
+2. Select a slot from the machine
+3. Press **VEND** to dispense your item
+4. Copy the item from the tray — it's yours!
 
-Items are dispensed top-to-bottom. When a line is dispensed, it's removed from the file.
+### In Discord
 
-### Stock Types
+Join the [XotiicTech Discord](https://discord.gg/xotiictech) and interact with the \
+vending machine panels in the stock channels. Press a button, pick an item from the \
+dropdown, and the bot DMs you the content.
 
-The filename determines the stock type and tier:
+### Beta vs Premium
 
-| Filename | Type | Tier |
-|----------|------|------|
-| `epicgames.txt` | epicgames | Beta (free) |
-| `steam.txt` | steam | Beta (free) |
-| `premium_nitro.txt` | premium_nitro | Premium |
-| `premium_spotify.txt` | premium_spotify | Premium |
+- **Beta items** are free for everyone
+- **Premium items** require a Premium role — grab it for $3 on the [Vending X page](/vendingx) or the [Store](/store/vendingx-premium)
 
-Any file starting with `premium_` requires the premium role to vend.
+### Cooldowns
 
-### Adding Stock
-
-**Via file**: Drop a `.txt` file into the `stock/` folder and restart the bot (or wait for the 5-minute auto-update).
-
-**Via command**: Use `/addstock` and attach a `.txt` file. The bot adds the lines to the existing stock.
-
-### Monitoring Stock
-
-- The auto-update panels show live counts every 5 minutes
-- Use `/panel` for a full stats overview
-- The website at `/vendingx` also shows current stock levels
+There's a short cooldown between vends to keep things fair for everyone. \
+Wait a few seconds and try again.
 """
 
-DOC_VENDINGX_DISCLOUD = """\
-## Hosting on Discloud
+DOC_PRODUCTS_OVERVIEW = """\
+## Our Products
 
-[Discloud](https://discloud.com) is a free hosting platform for Discord bots. Here's how to deploy Vending X.
+XotiicTech builds and sells Discord bots, source code, and digital tools.
 
-### 1. Create discloud.config
+### Discord Bots
 
-Add this file to your bot's root folder:
+Custom-built Discord bots with slash commands, interactive UIs, and full documentation. \
+Available as hosted instances or full source code you can run yourself.
 
-```
-ID=auto
-TYPE=bot
-MAIN=main.py
-RAM=512
-VERSION=v3.10
-AUTORESTART=true
-```
+- [Vending X — Bot Access](/store/vendingx-bot-access) — Run your own vending machine bot
+- [Vending X — Premium](/store/vendingx-premium) — Unlock premium vending items
 
-### 2. Prepare the Zip
+### What's Included
 
-Zip the **contents** of your bot folder (not the folder itself):
+Every product comes with:
 
-```
-main.py
-requirements.txt
-discloud.config
-bot/
-web/
-stock/
-```
+- Instant digital delivery
+- Documentation and setup instructions
+- Free updates (re-download from your account)
+- Support via our [Discord server](https://discord.gg/xotiictech)
 
-**Do NOT include** `.env` or `data/` in the zip.
+### Custom Bots
 
-### 3. Upload to Discloud
-
-1. Go to [discloud.com](https://discloud.com) and sign in
-2. Click **Add App** and upload your zip
-3. Go to your app's settings and add your environment variables:
-   - `DISCORD_BOT_TOKEN`
-   - `BOT_OWNER_ID`
-   - `MAIN_SERVER_ID`
-   - `PREMIUM_ROLE_ID` (optional)
-4. Start the bot
-
-### 4. Updating
-
-To update the bot, create a new zip with your changes and use Discloud's **Commit** feature to upload it. \
-Your environment variables and data persist between updates.
-
-### Troubleshooting
-
-- **Bot goes offline**: Check RAM. Increase from 512 to 1024 if needed.
-- **Commands not syncing**: Restart the bot from the dashboard. Commands sync on startup.
-- **Stock not loading**: Make sure your `.txt` files are included in the zip under `stock/`.
-"""
-
-DOC_FAQ_PREMIUM = """\
-Premium unlocks access to premium-tier stock items in the Vending X vending machine. \
-Beta items are free for everyone — premium items are gated behind a Discord role.
-
-**How to get Premium:**
-- Purchase it for $3 on the [store](/store/vendingx-premium) or the [Vending X page](/vendingx)
-- After payment, the premium role is automatically assigned to your Discord account
-- You can then vend premium items through the bot or the website
-
-Premium is a one-time purchase — no subscription.
-"""
-
-DOC_FAQ_ADDSTOCK = """\
-Create a `.txt` file with one item per line and drop it into the `stock/` folder. \
-The filename becomes the stock type name.
-
-For example, `epicgames.txt` with contents:
-```
-account1@email.com:pass1
-account2@email.com:pass2
-```
-
-You can also use the `/addstock` command in Discord and attach a `.txt` file. \
-Prefix filenames with `premium_` to make them premium-only (e.g., `premium_nitro.txt`).
-
-Stock updates are picked up automatically every 5 minutes, or immediately on bot restart.
-"""
-
-DOC_FAQ_CUSTOMIZE = """\
-Yes! You own the full source code. You can:
-
-- Change the bot's name, avatar, and status message
-- Modify embed colors, text, and formatting
-- Add new stock types by dropping `.txt` files in `stock/`
-- Change cooldown timers and rate limits
-- Add or remove commands
-- Modify the premium role logic
-
-The bot is written in Python with discord.py — if you know Python, you can customize anything. \
-If you need help, join the [XotiicTech Discord](https://discord.gg/xotiictech).
-"""
-
-DOC_FAQ_DISCLOUD_HOST = """\
-Yes! Discloud offers a free tier that works perfectly for Vending X:
-
-1. Create a `discloud.config` file (see the [Discloud guide](/docs/vendingx-discloud))
-2. Zip your bot files (without `.env`)
-3. Upload at [discloud.com](https://discloud.com)
-4. Set your environment variables in the dashboard
-5. Start the bot
-
-The free tier gives you 512MB RAM which is enough for most servers. \
-If you have a lot of stock or a very active server, you may need to upgrade to a paid plan.
+Need something built from scratch? We take commissions. \
+Visit the [Commission](/bots/commission) page to request a quote.
 """
 
 DOC_FAQ_DOWNLOAD = """\
 Sign in at [/account](/account) with the same email you used to purchase. \
 Click **Download** next to your order to generate a fresh download link.
 
-Download links expire after a set time for security, but you can always generate a new one from your account page.
+Download links expire for security, but you can always generate a new one from your account.
+"""
+
+DOC_FAQ_PAYMENT = """\
+We accept all major credit and debit cards through Stripe, including Visa, Mastercard, \
+Amex, and Discover. Apple Pay and Google Pay are also supported at checkout.
+
+All transactions are encrypted and processed securely — we never see or store your card details.
+"""
+
+DOC_FAQ_REFUND = """\
+Because digital goods are delivered instantly, all sales are final once the file has been downloaded.
+
+If you **haven't downloaded** yet, you can request a refund within 14 days of purchase. \
+If the product is broken or not as described, contact us within 14 days and we'll fix it or refund you.
+
+See our full [Refund Policy](/legal/refund_policy) for details.
+"""
+
+DOC_FAQ_PREMIUM = """\
+Vending X Premium unlocks access to premium-tier items in the vending machine. \
+Beta items are free for everyone — premium items are exclusive.
+
+**How to get it:**
+- Purchase for $3 on the [Store](/store/vendingx-premium) or the [Vending X page](/vendingx)
+- Your Discord account gets the Premium role automatically after payment
+- Vend premium items through the bot or the website immediately
+
+It's a one-time purchase — no subscription, no recurring charges.
+"""
+
+DOC_FAQ_SUPPORT = """\
+The fastest way to get help is through our Discord server:
+
+1. Join at [discord.gg/xotiictech](https://discord.gg/xotiictech)
+2. Head to the support channel
+3. Describe your issue and we'll help you out
+
+You can also reach us through the [Contact](/contact) page on the website. \
+We typically respond within 24 hours.
+"""
+
+DOC_FAQ_BOT_ACCESS = """\
+When you purchase Bot Access, you get the **full source code** of the Vending X bot. \
+This is the complete bot — not a hosted instance.
+
+**What's included:**
+- All Python source files
+- Every command and feature
+- Complete setup guide at [/vendingx/setup](/vendingx/setup)
+- Free updates (re-download from your account when new versions drop)
+
+**What's NOT included:**
+- The website / web frontend
+- Hosting (you host it yourself on Discloud, a VPS, or your PC)
+
+After purchase you'll receive a download link for the `.zip` file. Follow the setup guide to get it running.
 """
 
 
@@ -532,34 +454,28 @@ def main() -> None:
         )
         upsert_by_slug(
             db, DocPage, "getting-started",
-            title="Getting started", section="guides", is_published=True, sort_order=0,
-            body="## After purchase\n\n1. Check your email for the download link.\n"
-            "2. Lost it? Sign in at **/account** with the same email.\n3. Follow the product's setup guide.",
+            title="Getting Started", section="guides", is_published=True, sort_order=0,
+            body=DOC_GETTING_STARTED,
         )
         upsert_by_slug(
-            db, DocPage, "vendingx-overview",
-            title="Vending X Overview", section="guides", is_published=True, sort_order=10,
-            body=DOC_VENDINGX_OVERVIEW,
+            db, DocPage, "how-to-purchase",
+            title="How to Buy", section="guides", is_published=True, sort_order=1,
+            body=DOC_HOW_TO_PURCHASE,
         )
         upsert_by_slug(
-            db, DocPage, "vendingx-setup",
-            title="Vending X Bot Setup", section="guides", is_published=True, sort_order=11,
-            body=DOC_VENDINGX_SETUP,
+            db, DocPage, "your-account",
+            title="Your Account", section="guides", is_published=True, sort_order=2,
+            body=DOC_ACCOUNT,
         )
         upsert_by_slug(
-            db, DocPage, "vendingx-commands",
-            title="Vending X Commands", section="guides", is_published=True, sort_order=12,
-            body=DOC_VENDINGX_COMMANDS,
+            db, DocPage, "using-vending-x",
+            title="Using Vending X", section="guides", is_published=True, sort_order=3,
+            body=DOC_VENDING_X,
         )
         upsert_by_slug(
-            db, DocPage, "vendingx-stock",
-            title="Managing Stock", section="guides", is_published=True, sort_order=13,
-            body=DOC_VENDINGX_STOCK,
-        )
-        upsert_by_slug(
-            db, DocPage, "vendingx-discloud",
-            title="Hosting on Discloud", section="guides", is_published=True, sort_order=14,
-            body=DOC_VENDINGX_DISCLOUD,
+            db, DocPage, "our-products",
+            title="Our Products", section="guides", is_published=True, sort_order=4,
+            body=DOC_PRODUCTS_OVERVIEW,
         )
         upsert_by_slug(
             db, DocPage, "faq-download-expired",
@@ -567,24 +483,29 @@ def main() -> None:
             body=DOC_FAQ_DOWNLOAD,
         )
         upsert_by_slug(
+            db, DocPage, "faq-payment-methods",
+            title="What payment methods do you accept?", section="faq", is_published=True, sort_order=1,
+            body=DOC_FAQ_PAYMENT,
+        )
+        upsert_by_slug(
+            db, DocPage, "faq-refunds",
+            title="Can I get a refund?", section="faq", is_published=True, sort_order=2,
+            body=DOC_FAQ_REFUND,
+        )
+        upsert_by_slug(
             db, DocPage, "faq-what-is-premium",
-            title="What is Vending X Premium?", section="faq", is_published=True, sort_order=1,
+            title="What is Vending X Premium?", section="faq", is_published=True, sort_order=3,
             body=DOC_FAQ_PREMIUM,
         )
         upsert_by_slug(
-            db, DocPage, "faq-add-stock",
-            title="How do I add stock to Vending X?", section="faq", is_published=True, sort_order=2,
-            body=DOC_FAQ_ADDSTOCK,
+            db, DocPage, "faq-get-support",
+            title="How do I get support?", section="faq", is_published=True, sort_order=4,
+            body=DOC_FAQ_SUPPORT,
         )
         upsert_by_slug(
-            db, DocPage, "faq-customize-bot",
-            title="Can I customize the bot?", section="faq", is_published=True, sort_order=3,
-            body=DOC_FAQ_CUSTOMIZE,
-        )
-        upsert_by_slug(
-            db, DocPage, "faq-discloud-hosting",
-            title="Can I host the bot for free on Discloud?", section="faq", is_published=True, sort_order=4,
-            body=DOC_FAQ_DISCLOUD_HOST,
+            db, DocPage, "faq-bot-access",
+            title="What do I get with Bot Access?", section="faq", is_published=True, sort_order=5,
+            body=DOC_FAQ_BOT_ACCESS,
         )
         if not db.scalar(select(Testimonial.id).limit(1)):
             db.add(Testimonial(name="Sample Client", role="Server owner, 12k members",
