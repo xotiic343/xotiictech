@@ -24,6 +24,7 @@ vendingx/data/
 vendingx/stock/
 vendingx/*.db
 vendingx-discloud.zip
+vendingx.zip
 
 # os / editors
 .DS_Store

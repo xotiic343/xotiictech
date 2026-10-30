@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 
-const STRIPE_SECRET = process.env.VENDINGX_STRIPE_SECRET_KEY || "";
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || "";
 const FRONTEND_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://xotiictech.net";
 const BOT_ACCESS_PRICE_ID = process.env.VENDINGX_BOT_ACCESS_PRICE_ID || "";
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     mode: "payment",
     "line_items[0][price]": BOT_ACCESS_PRICE_ID,
     "line_items[0][quantity]": "1",
-    success_url: `${FRONTEND_URL}/vendingx?payment=success`,
+    success_url: `${FRONTEND_URL}/vendingx/setup?payment=success`,
     cancel_url: `${FRONTEND_URL}/vendingx?payment=cancel`,
   });
   if (discordId) {

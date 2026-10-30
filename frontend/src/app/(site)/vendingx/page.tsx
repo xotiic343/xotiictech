@@ -169,6 +169,27 @@ function CoilSpring() {
   );
 }
 
+/* ── Product image with PNG fallback ── */
+
+function ProductImage({ type, name, className }: { type: string; name: string; className?: string }) {
+  const [imgOk, setImgOk] = useState(true);
+  const src = `/vendingx/products/${type.replace("premium_", "").replace(/\s+/g, "_").toLowerCase()}.png`;
+
+  if (!imgOk) {
+    return <span className={className}>{slotIcon(name)}</span>;
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      className={`object-contain drop-shadow-[0_0_6px_rgba(230,0,0,.3)] ${className ?? "h-8 w-8"}`}
+      onError={() => setImgOk(false)}
+    />
+  );
+}
+
 /* ── Constants ── */
 
 const SLOT_IDS = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4"];
@@ -185,6 +206,8 @@ export default function VendingXPage() {
   const [shaking, setShaking] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showDiscord, setShowDiscord] = useState(false);
+  const [vendPhase, setVendPhase] = useState<"idle" | "dispensing" | "tray" | "done">("idle");
+  const [dispensedProduct, setDispensedProduct] = useState<{ type: string; name: string } | null>(null);
   const keyBuf = useRef("");
 
   /* ── Auth check (NextAuth) ── */
@@ -249,7 +272,7 @@ export default function VendingXPage() {
         setLcd("SELECT A SLOT");
         setShowLogin(false);
         setShowDiscord(false);
-      } else if (k === "ENTER" && selected) {
+      } else if (k === "ENTER" && selected && vendPhase === "idle") {
         doVend();
       }
     }
@@ -260,7 +283,7 @@ export default function VendingXPage() {
   /* ── Vend (redirects to Discord) ── */
 
   function doVend() {
-    if (!selected) return;
+    if (!selected || vendPhase !== "idle") return;
 
     if (!user) {
       setShowLogin(true);
@@ -268,13 +291,27 @@ export default function VendingXPage() {
       return;
     }
 
-    setShaking(true);
-    setTimeout(() => setShaking(false), 500);
-
-    const cmd = `/vend ${selected.type}`;
-    setLcd(`USE: ${cmd}`);
+    const info = stock[selected.type];
+    setDispensedProduct({ type: selected.type, name: info?.name || selected.type });
     setShowLogin(false);
-    setShowDiscord(true);
+    setShowDiscord(false);
+    setVendPhase("dispensing");
+    setShaking(true);
+    setLcd("DISPENSING...");
+
+    setTimeout(() => setShaking(false), 600);
+
+    setTimeout(() => {
+      setVendPhase("tray");
+      setLcd("ITEM DISPENSED");
+    }, 900);
+
+    setTimeout(() => {
+      setVendPhase("done");
+      setShowDiscord(true);
+      const cmd = `/vend ${selected.type}`;
+      setLcd(`USE: ${cmd}`);
+    }, 2200);
   }
 
   /* ── Helpers ── */
@@ -285,6 +322,8 @@ export default function VendingXPage() {
     setLcd(`${slotId}: ${info.name}`);
     setShowLogin(false);
     setShowDiscord(false);
+    setVendPhase("idle");
+    setDispensedProduct(null);
   }
 
   function handleKeypad(k: string) {
@@ -524,15 +563,15 @@ export default function VendingXPage() {
                             {/* Slot label */}
                             <span className="font-display text-[10px] font-bold tracking-wider text-blood/80">{slotId}</span>
 
-                            {/* Product icon */}
-                            <span className={`transition-all duration-200 ${isSelected ? "scale-110 text-blood" : "text-neutral-500 group-hover:text-neutral-400 group-hover:scale-105"}`}>
-                              {info ? slotIcon(info.name) : ICONS.default}
-                            </span>
-
-                            {/* Product name */}
-                            <span className="text-center text-[10px] font-semibold leading-tight text-neutral-300 sm:text-xs">
-                              {info?.name || "Empty"}
-                            </span>
+                            {/* Product visual — drops when dispensing */}
+                            <div className={`flex flex-col items-center gap-1.5 ${vendPhase === "dispensing" && isSelected ? "vx-dropping" : ""}`}>
+                              <span className={`transition-all duration-200 ${isSelected ? "scale-110 text-blood" : "text-neutral-500 group-hover:text-neutral-400 group-hover:scale-105"}`}>
+                                {info ? <ProductImage type={typeKey} name={info.name} /> : ICONS.default}
+                              </span>
+                              <span className="text-center text-[10px] font-semibold leading-tight text-neutral-300 sm:text-xs">
+                                {info?.name || "Empty"}
+                              </span>
+                            </div>
 
                             {/* Stock count with bar */}
                             {info && (
@@ -669,7 +708,7 @@ export default function VendingXPage() {
                     />
                     <button
                       onClick={doVend}
-                      disabled={!selected}
+                      disabled={!selected || vendPhase !== "idle"}
                       className="group relative h-20 w-20 rounded-full p-1 transition hover:scale-[1.03] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed sm:h-24 sm:w-24"
                       style={{
                         background: "linear-gradient(145deg, #2a0000, #1a0000)",
@@ -712,6 +751,23 @@ export default function VendingXPage() {
                     className="pointer-events-none absolute inset-x-0 bottom-0 h-3 opacity-20"
                     style={{ background: "repeating-linear-gradient(90deg, transparent 0px, transparent 8px, rgba(230,0,0,.1) 8px, rgba(230,0,0,.1) 9px)" }}
                   />
+
+                  {/* Dispensed product popup */}
+                  {(vendPhase === "tray" || vendPhase === "done") && dispensedProduct && (
+                    <div className="vx-tray-popup flex items-center gap-4 border-b border-crimson/10 p-5">
+                      <div
+                        className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-blood/40 bg-blood/10"
+                        style={{ boxShadow: "0 0 20px rgba(230,0,0,.15), inset 0 0 10px rgba(0,0,0,.3)" }}
+                      >
+                        <ProductImage type={dispensedProduct.type} name={dispensedProduct.name} className="h-10 w-10" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-display text-sm font-bold tracking-wider text-blood">{dispensedProduct.name}</div>
+                        <div className="mt-0.5 text-xs text-green-400/80">Item dispensed!</div>
+                        <div className="mt-1 text-[10px] text-muted">Collect it in Discord below</div>
+                      </div>
+                    </div>
+                  )}
 
                   {showLogin && (
                     <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
@@ -891,11 +947,26 @@ export default function VendingXPage() {
           50% { opacity: .8; }
         }
         .vx-premium-badge { animation: vxBadgePulse 3s ease-in-out infinite; }
+        @keyframes vxDropping {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          20% { transform: translateY(12px) rotate(-2deg); opacity: .9; }
+          100% { transform: translateY(90px) rotate(4deg); opacity: 0; }
+        }
+        .vx-dropping { animation: vxDropping .7s ease-in forwards; pointer-events: none; }
+        @keyframes vxTrayPopup {
+          0% { transform: translateY(40px) scale(0.3); opacity: 0; }
+          35% { transform: translateY(-14px) scale(1.08); opacity: 1; }
+          55% { transform: translateY(6px) scale(0.96); }
+          75% { transform: translateY(-3px) scale(1.02); }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .vx-tray-popup { animation: vxTrayPopup .65s cubic-bezier(.34, 1.56, .64, 1); }
         .vx-coil { transition: transform .3s ease; }
         button:hover .vx-coil { transform: translateX(-50%) scaleY(1.05); opacity: .3; }
         @media (prefers-reduced-motion: reduce) {
           .vx-shake, .vx-slide-up, .vx-neon, .vx-led, .vx-led-tiny, .vx-led-green,
-          .vx-lcd, .vx-vend-pulse, .vx-selected, .vx-premium-badge { animation: none; }
+          .vx-lcd, .vx-vend-pulse, .vx-selected, .vx-premium-badge,
+          .vx-dropping, .vx-tray-popup { animation: none; }
         }
       `}</style>
     </section>
