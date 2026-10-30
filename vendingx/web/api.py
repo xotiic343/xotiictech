@@ -52,6 +52,29 @@ def _check_ip_cooldown(ip: str) -> tuple[bool, int]:
     return False, 0
 
 
+@router.get("/feed")
+async def get_feed() -> JSONResponse:
+    """Return the last 25 vend events for the live feed."""
+    from bot.bot import STOCK_TYPES
+    db = get_db()
+    rows = db.execute(
+        "SELECT u.username, s.stock_type, s.source, s.generated_at "
+        "FROM stock_usage s JOIN users u ON u.id = s.user_id "
+        "ORDER BY s.generated_at DESC LIMIT 25"
+    ).fetchall()
+    feed = []
+    for username, stype, source, ts in rows:
+        info = STOCK_TYPES.get(stype, {})
+        feed.append({
+            "username": username,
+            "category": info.get("name", stype),
+            "emoji": info.get("emoji", "📦"),
+            "source": source,
+            "time": ts,
+        })
+    return JSONResponse(feed)
+
+
 @router.get("/stock")
 async def get_stock() -> JSONResponse:
     """Return stock counts for all types."""

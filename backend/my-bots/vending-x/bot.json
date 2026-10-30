@@ -1,0 +1,12 @@
+{
+  "application_id": "1565586655123996802",
+  "name": "Vending X",
+  "short_description": "A digital-inventory vending machine bot: dispense opaque text payloads from .txt files via slash commands, a web portal or Stripe checkout.",
+  "tags": ["vending", "inventory", "dispenser", "premium", "stripe", "utility"],
+  "category": "Utility",
+  "pricing_type": "premium",
+  "price_label": "$3 one-time",
+  "website_url": "https://xotiictech.net/vendingx",
+  "version": "1.0.0",
+  "featured": true
+}
