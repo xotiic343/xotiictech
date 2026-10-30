@@ -363,6 +363,55 @@ export default function VendingXPage() {
 
   return (
     <section className="container-x py-12">
+      {/* Login bar – same pattern as support layout */}
+      <div className="mb-6 flex items-center justify-between border-b border-line bg-black/90 px-4 py-2">
+        <span className="font-display text-[11px] uppercase tracking-[0.2em] text-blood">
+          Vending X
+        </span>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <div className="flex items-center gap-2">
+                {user.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`https://cdn.discordapp.com/avatars/${user.user_id}/${user.avatar}.png?size=64`}
+                    alt="" className="h-6 w-6 rounded-full border border-line"
+                  />
+                ) : (
+                  <div className="h-6 w-6 rounded-full border border-line bg-panel" />
+                )}
+                <span className="text-[11px] uppercase tracking-wider text-muted">
+                  <span className="text-crimson">&gt; </span>
+                  {user.username}
+                </span>
+                {user.has_access && (
+                  <span className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood">
+                    PREMIUM
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  await fetch("/vendingx/auth/logout", { method: "POST", credentials: "include" });
+                  setUser(null);
+                }}
+                className="btn-ghost btn-sm"
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <a href="/vendingx/auth/login" className="btn-primary btn-sm inline-flex items-center gap-2">
+              <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
+                <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
+              </svg>
+              Login with Discord
+            </a>
+          )}
+        </div>
+      </div>
+
       {/* Neon title */}
       <Reveal>
         <h1
@@ -543,11 +592,8 @@ export default function VendingXPage() {
               {showLogin && (
                 <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
                   <p className="text-sm text-neutral-300">Log in with Discord to vend.</p>
-                  <a
-                    href="/vendingx/auth/login"
-                    className="inline-flex items-center gap-2 border border-[#5865F2]/60 bg-[#5865F2]/10 px-5 py-2.5 font-display text-xs font-bold tracking-wider text-[#5865F2] transition hover:bg-[#5865F2]/20"
-                  >
-                    <svg width="16" height="12" viewBox="0 0 71 55" fill="currentColor">
+                  <a href="/vendingx/auth/login" className="btn-primary btn-sm inline-flex items-center gap-2">
+                    <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
                       <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
                     </svg>
                     Login with Discord
@@ -592,52 +638,6 @@ export default function VendingXPage() {
             </div>
           </div>
 
-          {/* User bar */}
-          <div className="mt-4 flex items-center justify-between text-sm">
-            {user ? (
-              <>
-                <div className="flex items-center gap-2">
-                  {user.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`https://cdn.discordapp.com/avatars/${user.user_id}/${user.avatar}.png?size=64`}
-                      alt="" className="h-7 w-7 rounded-full border border-line"
-                    />
-                  ) : (
-                    <div className="h-7 w-7 rounded-full border border-line bg-panel" />
-                  )}
-                  <span className="font-semibold text-neutral-200">{user.username}</span>
-                  {user.has_access && (
-                    <span
-                      className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood"
-                      style={{ boxShadow: "0 0 6px rgba(230,0,0,.15)" }}
-                    >
-                      PREMIUM
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={async () => {
-                    await fetch("/vendingx/auth/logout", { method: "POST", credentials: "include" });
-                    setUser(null);
-                  }}
-                  className="btn-ghost btn-sm"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <a
-                href="/vendingx/auth/login"
-                className="inline-flex items-center gap-2 text-xs text-neutral-400 transition hover:text-white"
-              >
-                <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
-                  <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
-                </svg>
-                Log in to vend
-              </a>
-            )}
-          </div>
         </div>
 
         {/* ─── Live Feed ── */}
