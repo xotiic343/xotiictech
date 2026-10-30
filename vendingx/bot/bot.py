@@ -13,7 +13,7 @@ from discord.ext import commands
 from bot import stock, access, parser
 from bot.access import cooldowns
 from bot.db import get_db
-from bot.views import VendingMachineView, build_machine_embed
+from bot.views import VendingMachineView, TierVendingView, build_machine_embed, _tier_embed
 
 log = logging.getLogger("vendingx.bot")
 
@@ -60,11 +60,16 @@ class VendingCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
-    @app_commands.command(name="vending", description="Open the machine")
-    async def vending(self, interaction: discord.Interaction) -> None:
+    @app_commands.command(name="vending", description="Open the vending machine")
+    @app_commands.describe(tier="beta (free items) or premium")
+    @app_commands.choices(tier=[
+        app_commands.Choice(name="Beta (Free)", value="beta"),
+        app_commands.Choice(name="Premium", value="premium"),
+    ])
+    async def vending(self, interaction: discord.Interaction, tier: str = "beta") -> None:
         refresh_stock_types()
-        embed = build_machine_embed()
-        view = VendingMachineView(interaction.user.id, self.bot, get_db())
+        embed = _tier_embed(tier)
+        view = TierVendingView(tier)
         await interaction.response.send_message(embed=embed, view=view)
 
     @app_commands.command(name="vend", description="Quick vend")

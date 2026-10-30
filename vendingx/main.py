@@ -41,6 +41,10 @@ async def on_ready() -> None:
 
     await bot.load_extension("bot.bot")
 
+    from bot.views import TierVendingView
+    bot.add_view(TierVendingView("beta"))
+    bot.add_view(TierVendingView("premium"))
+
     try:
         synced = await bot.tree.sync()
         log.info("Synced %d commands", len(synced))
