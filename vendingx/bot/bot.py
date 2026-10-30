@@ -473,17 +473,35 @@ class VendingCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="VENDING X — GET ACCESS",
+            title="🔴  VENDING X — GET ACCESS",
             description=(
-                "Choose a plan below to unlock features.\n\n"
-                "**Premium** — $3\n"
-                "Unlock all premium stock items.\n\n"
-                "**Bot Access** — $50\n"
-                "Full access to the Vending X bot for your server."
+                "```\n"
+                "╔════════════════════════╗\n"
+                "║   CHOOSE YOUR PLAN     ║\n"
+                "╚════════════════════════╝\n"
+                "```"
             ),
-            color=discord.Color.dark_red(),
+            color=0x8B0000,
         )
-        embed.set_footer(text="Payments handled securely via Stripe")
+        embed.add_field(
+            name="💎  Premium — $3",
+            value=(
+                "> Unlock **all premium stock** items.\n"
+                "> One-time payment, instant access.\n"
+                "───────────────────────────────────"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="🚀  Bot Access — $50",
+            value=(
+                "> Full access to **Vending X** for your server.\n"
+                "> Includes all features and updates.\n"
+                "───────────────────────────────────"
+            ),
+            inline=False,
+        )
+        embed.set_footer(text="🔒 Secure payments via Stripe  │  xotiictech.net/vendingx")
 
         view = discord.ui.View(timeout=None)
         view.add_item(discord.ui.Button(

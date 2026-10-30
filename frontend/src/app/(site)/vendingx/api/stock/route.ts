@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "";
+const BOT_TOKEN = process.env.VENDINGX_BOT_TOKEN || "";
 const BETA_CHANNEL = process.env.VENDINGX_BETA_CHANNEL_ID || "";
 const PREMIUM_CHANNEL = process.env.VENDINGX_PREMIUM_CHANNEL_ID || "";
 const DISCORD_API = "https://discord.com/api/v10";

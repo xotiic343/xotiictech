@@ -13,6 +13,26 @@ log = logging.getLogger("vendingx.views")
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://xotiictech.net")
 
+STOCK_EMOJI: dict[str, str] = {
+    "epic": "⚡", "steam": "🎮", "roblox": "🕹️",
+    "instagram": "📸", "onlyfans": "💕", "random": "🎲",
+    "randomip": "🌐", "ip": "🌐", "ubisoft": "🎯",
+    "nitro": "💎", "netflix": "🎥", "spotify": "🎵",
+    "minecraft": "⛏️", "r6": "🛡️",
+}
+
+
+def _emoji(key: str) -> str:
+    for k, e in STOCK_EMOJI.items():
+        if k in key:
+            return e
+    return "📦"
+
+
+def _bar(count: int, width: int = 10) -> str:
+    filled = min(count, width)
+    return "▰" * filled + "▱" * (width - filled)
+
 
 def _stock_types() -> dict:
     from bot.bot import STOCK_TYPES, refresh_stock_types
@@ -25,36 +45,62 @@ def build_machine_embed() -> discord.Embed:
     total = sum(stock.count(st) for st in types)
 
     embed = discord.Embed(
-        title="VENDING X",
-        description="Pick a product below and hit **VEND**.\n`[P]` = Premium only\nBeta items are free for everyone.",
-        color=discord.Color.dark_red(),
+        title="🔴  V E N D I N G   X",
+        description=(
+            "```\n"
+            "╔════════════════════════╗\n"
+            "║  SELECT • VEND • ENJOY  ║\n"
+            "╚════════════════════════╝\n"
+            "```\n"
+            "Pick a product below and hit **VEND**.\n"
+            "🟢 Beta items are **free** for everyone\n"
+            "🔴 Premium items require access"
+        ),
+        color=0x8B0000,
     )
 
     beta: list[str] = []
     premium: list[str] = []
     for st, info in types.items():
         cnt = stock.count(st)
-        tag = f"`{cnt}`" if cnt > 0 else "`--`"
-        line = f"{info['name']} {tag}"
+        e = _emoji(st)
+        if cnt > 0:
+            line = f"{e} **{info['name']}** {_bar(cnt)} `{cnt}`"
+        else:
+            line = f"{e} ~~{info['name']}~~ `EMPTY`"
         if st.startswith("premium_"):
             premium.append(line)
         else:
             beta.append(line)
 
     if beta:
-        embed.add_field(name="Beta Vending", value="\n".join(beta[:12]), inline=True)
+        embed.add_field(
+            name="🟢  Beta Vending — FREE",
+            value="\n".join(beta[:12]),
+            inline=False,
+        )
     if premium:
-        embed.add_field(name="Premium", value="\n".join(premium[:12]), inline=True)
+        embed.add_field(
+            name="🔴  Premium",
+            value="\n".join(premium[:12]),
+            inline=False,
+        )
 
-    embed.set_footer(text=f"{total} items loaded — xotiictech.net/vendingx")
+    embed.set_footer(
+        text=f"◼ {total} items loaded  │  xotiictech.net/vendingx",
+    )
     return embed
 
 
 def build_beta_embed() -> discord.Embed:
     types = _stock_types()
     embed = discord.Embed(
-        title="BETA VENDING — LIVE STOCK",
-        color=discord.Color.dark_red(),
+        title="🟢  BETA VENDING — LIVE STOCK",
+        description=(
+            "> Free items for everyone. Use `/vend` to grab one.\n"
+            "───────────────────────────────────"
+        ),
+        color=0x2D7D46,
     )
     lines: list[str] = []
     total = 0
@@ -63,21 +109,31 @@ def build_beta_embed() -> discord.Embed:
             continue
         cnt = stock.count(st)
         total += cnt
-        filled = min(cnt, 10)
-        bar = "█" * filled + "░" * (10 - filled)
-        lines.append(f"`{bar}` **{info['name']}** — {cnt}")
+        e = _emoji(st)
+        if cnt > 0:
+            lines.append(f"{e} **{info['name']}**\n {_bar(cnt)} — `{cnt}` in stock")
+        else:
+            lines.append(f"{e} ~~{info['name']}~~ — `EMPTY`")
 
     if lines:
-        embed.add_field(name="Free Items", value="\n".join(lines), inline=False)
-    embed.set_footer(text=f"{total} total — updates every 5 min")
+        embed.add_field(name="​", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="​", value="*No free items loaded.*", inline=False)
+
+    embed.set_footer(text=f"◼ {total} items  │  Updates every 5 min  │  Vending X")
     return embed
 
 
 def build_premium_embed() -> discord.Embed:
     types = _stock_types()
     embed = discord.Embed(
-        title="PREMIUM VENDING — LIVE STOCK",
-        color=discord.Color.dark_red(),
+        title="🔴  PREMIUM VENDING — LIVE STOCK",
+        description=(
+            "> Exclusive items for premium members.\n"
+            "> Get access: `$3` at [xotiictech.net/vendingx](" + FRONTEND_URL + "/vendingx)\n"
+            "───────────────────────────────────"
+        ),
+        color=0x8B0000,
     )
     lines: list[str] = []
     total = 0
@@ -86,13 +142,18 @@ def build_premium_embed() -> discord.Embed:
             continue
         cnt = stock.count(st)
         total += cnt
-        filled = min(cnt, 10)
-        bar = "█" * filled + "░" * (10 - filled)
-        lines.append(f"`{bar}` **{info['name']}** — {cnt}")
+        e = _emoji(st)
+        if cnt > 0:
+            lines.append(f"{e} **{info['name']}**\n {_bar(cnt)} — `{cnt}` in stock")
+        else:
+            lines.append(f"{e} ~~{info['name']}~~ — `EMPTY`")
 
     if lines:
-        embed.add_field(name="Premium Items", value="\n".join(lines), inline=False)
-    embed.set_footer(text=f"{total} total — updates every 5 min")
+        embed.add_field(name="​", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="​", value="*No premium items loaded.*", inline=False)
+
+    embed.set_footer(text=f"◼ {total} items  │  Updates every 5 min  │  Vending X")
     return embed
 
 
@@ -150,12 +211,21 @@ class TierVendingView(View):
 
         info = _stock_types().get(chosen, {})
         cnt = stock.count(chosen)
-        tier_label = "Premium" if self.tier == "premium" else "Beta Vending"
+        e = _emoji(chosen)
+        tier_label = "Premium" if self.tier == "premium" else "Beta"
+        tier_dot = "🔴" if self.tier == "premium" else "🟢"
         embed = discord.Embed(
-            title=info.get("name", chosen),
-            description=f"Tier: **{tier_label}**\nStock: `{cnt}`\nHit **VEND** to get one.",
-            color=discord.Color.dark_red(),
+            title=f"{e}  {info.get('name', chosen)}",
+            description=(
+                f"```\n"
+                f"  Tier  : {tier_label}\n"
+                f"  Stock : {cnt}\n"
+                f"```\n"
+                f"{tier_dot} Hit **VEND** below to dispense."
+            ),
+            color=0x8B0000 if self.tier == "premium" else 0x2D7D46,
         )
+        embed.set_footer(text="Vending X  │  Item expires in 2 min")
         # Store selection in the message for the VEND button
         await interaction.response.send_message(
             embed=embed,
@@ -239,15 +309,20 @@ class PersonalVendView(View):
         db.commit()
 
         try:
+            e = _emoji(self.selected)
             dm = discord.Embed(
-                title=info["name"],
-                description=f"```\n{entry}\n```",
-                color=discord.Color.dark_red(),
+                title=f"{e}  {info['name']}  —  DISPENSED",
+                description=(
+                    f"```\n{entry}\n```\n"
+                    f"───────────────────────────────────\n"
+                    f"📦 `{left}` remaining in stock"
+                ),
+                color=0x8B0000,
             )
-            dm.set_footer(text="Vending X — xotiictech.net")
+            dm.set_footer(text="🔴 Vending X  │  xotiictech.net/vendingx")
             await interaction.user.send(embed=dm)
             await interaction.followup.send(
-                f"**{info['name']}** sent to your DMs. `{left}` remaining.", ephemeral=True
+                f"✅ **{info['name']}** sent to your DMs. `{left}` remaining.", ephemeral=True
             )
         except discord.Forbidden:
             await interaction.followup.send(f"```\n{entry}\n```", ephemeral=True)
@@ -430,15 +505,20 @@ class VendingMachineView(View):
         db.commit()
 
         try:
+            e = _emoji(self.selected_slot)
             dm = discord.Embed(
-                title=info["name"],
-                description=f"```\n{entry}\n```",
-                color=discord.Color.dark_red(),
+                title=f"{e}  {info['name']}  —  DISPENSED",
+                description=(
+                    f"```\n{entry}\n```\n"
+                    f"───────────────────────────────────\n"
+                    f"📦 `{left}` remaining in stock"
+                ),
+                color=0x8B0000,
             )
-            dm.set_footer(text="Vending X — xotiictech.net")
+            dm.set_footer(text="🔴 Vending X  │  xotiictech.net/vendingx")
             await interaction.user.send(embed=dm)
             await interaction.followup.send(
-                f"**{info['name']}** sent to your DMs. `{left}` remaining.", ephemeral=True
+                f"✅ **{info['name']}** sent to your DMs. `{left}` remaining.", ephemeral=True
             )
         except discord.Forbidden:
             await interaction.followup.send(f"```\n{entry}\n```", ephemeral=True)
