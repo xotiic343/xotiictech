@@ -42,7 +42,6 @@ const nextConfig = {
     return [
       { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
       { source: "/vendingx/api/:path*", destination: `${vendingxUrl}/api/:path*` },
-      { source: "/vendingx/auth/:path*", destination: `${vendingxUrl}/auth/:path*` },
       { source: "/vendingx/stripe/:path*", destination: `${vendingxUrl}/stripe/:path*` },
     ];
   },

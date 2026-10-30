@@ -14,11 +14,10 @@ interface StockItem {
 }
 
 interface User {
-  user_id: number;
+  discordId: string;
   username: string;
-  avatar: string;
-  is_owner: boolean;
-  has_access: boolean;
+  globalName: string | null;
+  avatar: string | null;
 }
 
 interface VendResult {
@@ -185,24 +184,22 @@ export default function VendingXPage() {
   const [error, setError] = useState("");
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [showLogin, setShowLogin] = useState(false);
+  const [apiOk, setApiOk] = useState(true);
   const keyBuf = useRef("");
 
-  /* ── Auth check ── */
+  /* ── Auth check (NextAuth — same as support tab) ── */
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      document.cookie = `vx_session=${token}; path=/; secure; samesite=lax; max-age=86400`;
-      window.history.replaceState({}, "", window.location.pathname);
-    }
     fetchUser();
   }, []);
 
   async function fetchUser() {
     try {
-      const res = await fetch("/vendingx/auth/me", { credentials: "include" });
-      if (res.ok) setUser(await res.json());
+      const res = await fetch("/support/api/auth/session", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.user?.discordId) setUser(data.user);
+      }
     } catch { /* not logged in */ }
   }
 
@@ -211,8 +208,9 @@ export default function VendingXPage() {
   const fetchStock = useCallback(async () => {
     try {
       const res = await fetch("/vendingx/api/stock");
-      if (res.ok) setStock(await res.json());
-    } catch { /* silent */ }
+      if (res.ok) { setStock(await res.json()); setApiOk(true); }
+      else setApiOk(false);
+    } catch { setApiOk(false); }
   }, []);
 
   useEffect(() => {
@@ -278,6 +276,12 @@ export default function VendingXPage() {
     if (!user) {
       setShowLogin(true);
       setLcd("LOGIN REQUIRED");
+      return;
+    }
+
+    if (!apiOk) {
+      setLcd("API OFFLINE");
+      setError("Vending X API is currently offline. Try again later.");
       return;
     }
 
@@ -375,7 +379,7 @@ export default function VendingXPage() {
                 {user.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`https://cdn.discordapp.com/avatars/${user.user_id}/${user.avatar}.png?size=64`}
+                    src={`https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatar}.png?size=64`}
                     alt="" className="h-6 w-6 rounded-full border border-line"
                   />
                 ) : (
@@ -383,18 +387,18 @@ export default function VendingXPage() {
                 )}
                 <span className="text-[11px] uppercase tracking-wider text-muted">
                   <span className="text-crimson">&gt; </span>
-                  {user.username}
+                  {user.globalName || user.username}
                 </span>
-                {user.has_access && (
-                  <span className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood">
-                    PREMIUM
-                  </span>
-                )}
               </div>
               <button
                 onClick={async () => {
-                  await fetch("/vendingx/auth/logout", { method: "POST", credentials: "include" });
+                  const csrf = await fetch("/support/api/auth/csrf", { credentials: "include" }).then(r => r.json());
+                  const form = new FormData();
+                  form.append("csrfToken", csrf.csrfToken);
+                  form.append("callbackUrl", "/vendingx");
+                  await fetch("/support/api/auth/signout", { method: "POST", body: form, credentials: "include" });
                   setUser(null);
+                  window.location.reload();
                 }}
                 className="btn-ghost btn-sm"
               >
@@ -402,7 +406,7 @@ export default function VendingXPage() {
               </button>
             </>
           ) : (
-            <a href="/vendingx/auth/login" className="btn-primary btn-sm inline-flex items-center gap-2">
+            <a href="/support/api/auth/signin?callbackUrl=/vendingx" className="btn-primary btn-sm inline-flex items-center gap-2">
               <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
                 <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
               </svg>
@@ -411,6 +415,12 @@ export default function VendingXPage() {
           )}
         </div>
       </div>
+
+      {!apiOk && (
+        <div className="mb-4 border border-red-900/60 bg-red-950/30 px-4 py-2 text-center text-xs text-red-400">
+          Vending X API is currently offline — stock display and vending are unavailable.
+        </div>
+      )}
 
       {/* Neon title */}
       <Reveal>
@@ -592,7 +602,7 @@ export default function VendingXPage() {
               {showLogin && (
                 <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
                   <p className="text-sm text-neutral-300">Log in with Discord to vend.</p>
-                  <a href="/vendingx/auth/login" className="btn-primary btn-sm inline-flex items-center gap-2">
+                  <a href="/support/api/auth/signin?callbackUrl=/vendingx" className="btn-primary btn-sm inline-flex items-center gap-2">
                     <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
                       <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
                     </svg>

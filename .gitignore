@@ -23,6 +23,7 @@ next-env.d.ts
 vendingx/data/
 vendingx/stock/
 vendingx/*.db
+vendingx-discloud.zip
 
 # os / editors
 .DS_Store
