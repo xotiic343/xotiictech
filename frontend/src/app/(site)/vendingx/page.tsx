@@ -4,11 +4,10 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Reveal } from "@/components/fx/Reveal";
 
-/* ── Types ─────────────────────────────────────────── */
+/* ── Types ── */
 
 interface StockItem {
   name: string;
-  emoji: string;
   description: string;
   count: number;
   premium: boolean;
@@ -32,12 +31,11 @@ interface VendResult {
 interface FeedEntry {
   username: string;
   category: string;
-  emoji: string;
   source: string;
   time: string;
 }
 
-/* ── SVG icons (Lucide ISC license) by category keyword ── */
+/* ── SVG icons (Lucide ISC license) ── */
 
 const I = "h-7 w-7";
 const S = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
@@ -129,16 +127,6 @@ const ICONS: Record<string, ReactNode> = {
       <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" /><path d="M5 21h14" />
     </svg>
   ),
-  gift: (
-    <svg viewBox="0 0 24 24" className={I} {...S}>
-      <path d="M12 7v14" /><path d="M20 11v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" /><path d="M7.5 7a1 1 0 0 1 0-5A4.8 8 0 0 1 12 7a4.8 8 0 0 1 4.5-5 1 1 0 0 1 0 5" /><rect x="3" y="7" width="18" height="4" rx="1" />
-    </svg>
-  ),
-  shield: (
-    <svg viewBox="0 0 24 24" className={I} {...S}>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-    </svg>
-  ),
   r6: (
     <svg viewBox="0 0 24 24" className={I} {...S}>
       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
@@ -164,7 +152,7 @@ function slotIcon(name: string): ReactNode {
   return ICONS.default;
 }
 
-/* ── Constants ─────────────────────────────────────── */
+/* ── Constants ── */
 
 const SLOT_IDS = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4"];
 const POLL_MS = 15_000;
@@ -183,7 +171,7 @@ function timeAgo(ts: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-/* ── Page ──────────────────────────────────────────── */
+/* ── Page ── */
 
 export default function VendingXPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -196,9 +184,10 @@ export default function VendingXPage() {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [feed, setFeed] = useState<FeedEntry[]>([]);
+  const [showLogin, setShowLogin] = useState(false);
   const keyBuf = useRef("");
 
-  /* ── Auth check ──────────────────────────────────── */
+  /* ── Auth check ── */
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -217,7 +206,7 @@ export default function VendingXPage() {
     } catch { /* not logged in */ }
   }
 
-  /* ── Stock polling ───────────────────────────────── */
+  /* ── Stock polling ── */
 
   const fetchStock = useCallback(async () => {
     try {
@@ -232,7 +221,7 @@ export default function VendingXPage() {
     return () => clearInterval(id);
   }, [fetchStock]);
 
-  /* ── Live feed polling ──────────────────────────── */
+  /* ── Live feed polling ── */
 
   const fetchFeed = useCallback(async () => {
     try {
@@ -247,7 +236,7 @@ export default function VendingXPage() {
     return () => clearInterval(id);
   }, [fetchFeed]);
 
-  /* ── Keyboard handler ────────────────────────────── */
+  /* ── Keyboard handler ── */
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -272,6 +261,7 @@ export default function VendingXPage() {
         keyBuf.current = "";
         setSelected(null);
         setLcd("SELECT A SLOT");
+        setShowLogin(false);
       } else if (k === "ENTER" && selected) {
         doVend();
       }
@@ -280,13 +270,21 @@ export default function VendingXPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  /* ── Vend ────────────────────────────────────────── */
+  /* ── Vend ── */
 
   async function doVend() {
     if (vending || !selected) return;
+
+    if (!user) {
+      setShowLogin(true);
+      setLcd("LOGIN REQUIRED");
+      return;
+    }
+
     setVending(true);
     setDispensed(null);
     setError("");
+    setShowLogin(false);
     setLcd("VENDING...");
 
     setShaking(true);
@@ -324,13 +322,14 @@ export default function VendingXPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  /* ── Helpers ─────────────────────────────────────── */
+  /* ── Helpers ── */
 
   function selectSlot(slotId: string, typeKey: string, info: StockItem) {
     if (info.count === 0) return;
     setSelected({ slotId, type: typeKey });
     setLcd(`${slotId}: ${info.name}`);
     setDispensed(null);
+    setShowLogin(false);
   }
 
   function handleKeypad(k: string) {
@@ -360,37 +359,7 @@ export default function VendingXPage() {
   const entries = Object.entries(stock);
   const totalStock = Object.values(stock).reduce((a, s) => a + s.count, 0);
 
-  /* ── AUTH GATE ───────────────────────────────────── */
-
-  if (!user) {
-    return (
-      <section className="container-x flex min-h-[70vh] items-center justify-center py-20">
-        <Reveal>
-          <div className="card corner-brackets mx-auto max-w-md p-10 text-center">
-            <h1
-              className="font-display text-4xl font-black tracking-[0.2em] text-blood"
-              style={{ textShadow: "0 0 20px rgba(230,0,0,.5), 0 0 60px rgba(230,0,0,.2)" }}
-            >
-              VENDING X
-            </h1>
-            <p className="mt-4 text-sm text-muted">Log in with Discord to access the vending machine.</p>
-            <a
-              href="/vendingx/auth/login"
-              className="btn-primary mt-8 inline-flex items-center gap-2"
-              style={{ background: "#5865F2", boxShadow: "0 0 16px rgba(88,101,242,.35)" }}
-            >
-              <svg width="18" height="14" viewBox="0 0 71 55" fill="currentColor">
-                <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
-              </svg>
-              Login with Discord
-            </a>
-          </div>
-        </Reveal>
-      </section>
-    );
-  }
-
-  /* ── MAIN MACHINE ────────────────────────────────── */
+  /* ── RENDER ── */
 
   return (
     <section className="container-x py-12">
@@ -408,7 +377,7 @@ export default function VendingXPage() {
       </Reveal>
 
       <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_280px]">
-        {/* ─── Machine body ────────────────────────── */}
+        {/* ─── Machine body ── */}
         <div>
           <div
             className={`relative overflow-hidden border-2 border-crimson/40 transition-transform ${shaking ? "vx-shake" : ""}`}
@@ -431,7 +400,6 @@ export default function VendingXPage() {
 
             {/* Glass panel */}
             <div className="relative m-3 overflow-hidden border border-crimson/20 bg-black/80 p-3 sm:p-4">
-              {/* Glass reflections */}
               <div
                 className="pointer-events-none absolute inset-0 z-10"
                 style={{
@@ -466,7 +434,6 @@ export default function VendingXPage() {
                           : "border-line/60 bg-black/40 hover:border-crimson/60 hover:bg-blood/5"
                       }`}
                     >
-                      {/* LED indicator */}
                       <span
                         className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
                         style={{
@@ -474,7 +441,6 @@ export default function VendingXPage() {
                           boxShadow: soldOut ? "0 0 4px #ff2d2d" : "0 0 6px #00ff5e, 0 0 12px #00ff5e",
                         }}
                       />
-                      {/* Premium badge */}
                       {info?.premium && (
                         <span
                           className="absolute left-1 top-1 border border-blood/60 bg-blood/80 px-1 py-px font-display text-[8px] font-bold tracking-wider text-white"
@@ -483,19 +449,14 @@ export default function VendingXPage() {
                           PREMIUM
                         </span>
                       )}
-                      {/* Slot ID */}
                       <span className="font-display text-[10px] font-bold tracking-wider text-blood">{slotId}</span>
-                      {/* Icon */}
                       <span className={`${isSelected ? "text-blood" : "text-neutral-500 group-hover:text-neutral-400"} transition-colors`}>
                         {info ? slotIcon(info.name) : ICONS.default}
                       </span>
-                      {/* Name */}
                       <span className="text-center text-[10px] font-semibold leading-tight text-neutral-300 sm:text-xs">
                         {info?.name || "Empty"}
                       </span>
-                      {/* Stock count */}
                       <span className="font-display text-[9px] text-dim">{info ? `${info.count} left` : "—"}</span>
-                      {/* Sold-out overlay */}
                       {soldOut && (
                         <span
                           className="pointer-events-none absolute inset-0"
@@ -516,7 +477,6 @@ export default function VendingXPage() {
               className="mx-3 mb-3 flex flex-wrap items-center justify-center gap-4 border border-crimson/20 p-4"
               style={{ background: "linear-gradient(180deg, #180505, #0f0202)" }}
             >
-              {/* Coin slot */}
               <div className="flex flex-col items-center gap-1">
                 <div
                   className="h-1 w-10 border border-crimson/30 bg-black/80"
@@ -525,7 +485,6 @@ export default function VendingXPage() {
                 <span className="font-display text-[7px] tracking-[0.2em] text-blood/40">INSERT COIN</span>
               </div>
 
-              {/* Keypad */}
               <div className="grid grid-cols-4 gap-1">
                 {["A", "B", "C", "1", "2", "3", "4", "CLR"].map((k) => (
                   <button
@@ -543,7 +502,6 @@ export default function VendingXPage() {
                 ))}
               </div>
 
-              {/* LCD display */}
               <div
                 className="min-w-[160px] border border-crimson/30 bg-black px-3 py-2.5 text-center font-display text-xs tracking-wider"
                 style={{
@@ -555,7 +513,6 @@ export default function VendingXPage() {
                 {lcd}
               </div>
 
-              {/* VEND button */}
               <button
                 onClick={doVend}
                 disabled={!selected || vending}
@@ -582,6 +539,22 @@ export default function VendingXPage() {
               className="mx-3 mb-3 min-h-[44px] overflow-hidden border border-crimson/20 bg-black/70"
               style={{ boxShadow: "inset 0 4px 12px rgba(0,0,0,.6)" }}
             >
+              {/* Login prompt (shown when trying to vend without auth) */}
+              {showLogin && (
+                <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
+                  <p className="text-sm text-neutral-300">Log in with Discord to vend.</p>
+                  <a
+                    href="/vendingx/auth/login"
+                    className="inline-flex items-center gap-2 border border-[#5865F2]/60 bg-[#5865F2]/10 px-5 py-2.5 font-display text-xs font-bold tracking-wider text-[#5865F2] transition hover:bg-[#5865F2]/20"
+                  >
+                    <svg width="16" height="12" viewBox="0 0 71 55" fill="currentColor">
+                      <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
+                    </svg>
+                    Login with Discord
+                  </a>
+                </div>
+              )}
+
               {dispensed && (
                 <div className="vx-slide-up p-4">
                   <div className="border border-blood/40 bg-blood/5 p-4" style={{ boxShadow: "0 0 20px rgba(230,0,0,.08)" }}>
@@ -621,44 +594,53 @@ export default function VendingXPage() {
 
           {/* User bar */}
           <div className="mt-4 flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              {user.avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`https://cdn.discordapp.com/avatars/${user.user_id}/${user.avatar}.png?size=64`}
-                  alt="" className="h-7 w-7 rounded-full border border-line"
-                />
-              ) : (
-                <div className="h-7 w-7 rounded-full border border-line bg-panel" />
-              )}
-              <span className="font-semibold text-neutral-200">{user.username}</span>
-              {user.has_access && (
-                <span
-                  className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood"
-                  style={{ boxShadow: "0 0 6px rgba(230,0,0,.15)" }}
+            {user ? (
+              <>
+                <div className="flex items-center gap-2">
+                  {user.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={`https://cdn.discordapp.com/avatars/${user.user_id}/${user.avatar}.png?size=64`}
+                      alt="" className="h-7 w-7 rounded-full border border-line"
+                    />
+                  ) : (
+                    <div className="h-7 w-7 rounded-full border border-line bg-panel" />
+                  )}
+                  <span className="font-semibold text-neutral-200">{user.username}</span>
+                  {user.has_access && (
+                    <span
+                      className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood"
+                      style={{ boxShadow: "0 0 6px rgba(230,0,0,.15)" }}
+                    >
+                      PREMIUM
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={async () => {
+                    await fetch("/vendingx/auth/logout", { method: "POST", credentials: "include" });
+                    setUser(null);
+                  }}
+                  className="btn-ghost btn-sm"
                 >
-                  PREMIUM
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {user.is_owner && (
-                <a href="/vendingx/admin" className="btn-ghost btn-sm">Admin</a>
-              )}
-              <button
-                onClick={async () => {
-                  await fetch("/vendingx/auth/logout", { method: "POST", credentials: "include" });
-                  setUser(null);
-                }}
-                className="btn-ghost btn-sm"
+                  Logout
+                </button>
+              </>
+            ) : (
+              <a
+                href="/vendingx/auth/login"
+                className="inline-flex items-center gap-2 text-xs text-neutral-400 transition hover:text-white"
               >
-                Logout
-              </button>
-            </div>
+                <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
+                  <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
+                </svg>
+                Log in to vend
+              </a>
+            )}
           </div>
         </div>
 
-        {/* ─── Live Feed ───────────────────────────── */}
+        {/* ─── Live Feed ── */}
         <aside className="hidden lg:block">
           <div className="card sticky top-20 max-h-[calc(100vh-8rem)] overflow-hidden">
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -689,7 +671,7 @@ export default function VendingXPage() {
           </div>
         </aside>
 
-        {/* Mobile feed (below machine) */}
+        {/* Mobile feed */}
         <div className="lg:hidden">
           <div className="card">
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -716,7 +698,6 @@ export default function VendingXPage() {
         </div>
       </div>
 
-      {/* Inline keyframe styles */}
       <style>{`
         .vx-neon {
           animation: vxNeonPulse 2.5s ease-in-out infinite alternate;
