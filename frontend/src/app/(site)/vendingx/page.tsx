@@ -18,20 +18,7 @@ interface User {
   username: string;
   globalName: string | null;
   avatar: string | null;
-}
-
-interface VendResult {
-  item: string;
-  stock_type: string;
-  name: string;
-  remaining: number;
-}
-
-interface FeedEntry {
-  username: string;
-  category: string;
-  source: string;
-  time: string;
+  hasPremium?: boolean;
 }
 
 /* ── SVG icons (Lucide ISC license) ── */
@@ -154,21 +141,8 @@ function slotIcon(name: string): ReactNode {
 /* ── Constants ── */
 
 const SLOT_IDS = ["A1", "A2", "A3", "A4", "B1", "B2", "B3", "B4", "C1", "C2", "C3", "C4"];
-const POLL_MS = 15_000;
-const FEED_POLL_MS = 10_000;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-function timeAgo(ts: string): string {
-  const diff = Date.now() - new Date(ts + "Z").getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return "just now";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
+const POLL_MS = 30_000;
+const DISCORD_INVITE = process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/xotiictech";
 
 /* ── Page ── */
 
@@ -177,40 +151,38 @@ export default function VendingXPage() {
   const [stock, setStock] = useState<Record<string, StockItem>>({});
   const [selected, setSelected] = useState<{ slotId: string; type: string } | null>(null);
   const [lcd, setLcd] = useState("SELECT A SLOT");
-  const [vending, setVending] = useState(false);
   const [shaking, setShaking] = useState(false);
-  const [dispensed, setDispensed] = useState<VendResult | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState("");
-  const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [showLogin, setShowLogin] = useState(false);
-  const [apiOk, setApiOk] = useState(true);
+  const [showDiscord, setShowDiscord] = useState(false);
   const keyBuf = useRef("");
 
-  /* ── Auth check (NextAuth — same as support tab) ── */
+  /* ── Auth check (NextAuth) ── */
 
   useEffect(() => {
-    fetchUser();
+    (async () => {
+      try {
+        const res = await fetch("/support/api/auth/session", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data?.user?.discordId) return;
+        const u: User = data.user;
+        const prem = await fetch(`/vendingx/api/premium?userId=${u.discordId}`);
+        if (prem.ok) {
+          const { premium } = await prem.json();
+          u.hasPremium = premium;
+        }
+        setUser(u);
+      } catch { /* not logged in */ }
+    })();
   }, []);
 
-  async function fetchUser() {
-    try {
-      const res = await fetch("/support/api/auth/session", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.user?.discordId) setUser(data.user);
-      }
-    } catch { /* not logged in */ }
-  }
-
-  /* ── Stock polling ── */
+  /* ── Stock polling (reads Discord channels via bot token on server) ── */
 
   const fetchStock = useCallback(async () => {
     try {
       const res = await fetch("/vendingx/api/stock");
-      if (res.ok) { setStock(await res.json()); setApiOk(true); }
-      else setApiOk(false);
-    } catch { setApiOk(false); }
+      if (res.ok) setStock(await res.json());
+    } catch { /* silent */ }
   }, []);
 
   useEffect(() => {
@@ -218,21 +190,6 @@ export default function VendingXPage() {
     const id = setInterval(fetchStock, POLL_MS);
     return () => clearInterval(id);
   }, [fetchStock]);
-
-  /* ── Live feed polling ── */
-
-  const fetchFeed = useCallback(async () => {
-    try {
-      const res = await fetch("/vendingx/api/feed");
-      if (res.ok) setFeed(await res.json());
-    } catch { /* silent */ }
-  }, []);
-
-  useEffect(() => {
-    fetchFeed();
-    const id = setInterval(fetchFeed, FEED_POLL_MS);
-    return () => clearInterval(id);
-  }, [fetchFeed]);
 
   /* ── Keyboard handler ── */
 
@@ -260,6 +217,7 @@ export default function VendingXPage() {
         setSelected(null);
         setLcd("SELECT A SLOT");
         setShowLogin(false);
+        setShowDiscord(false);
       } else if (k === "ENTER" && selected) {
         doVend();
       }
@@ -268,10 +226,10 @@ export default function VendingXPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  /* ── Vend ── */
+  /* ── Vend (redirects to Discord) ── */
 
-  async function doVend() {
-    if (vending || !selected) return;
+  function doVend() {
+    if (!selected) return;
 
     if (!user) {
       setShowLogin(true);
@@ -279,51 +237,13 @@ export default function VendingXPage() {
       return;
     }
 
-    if (!apiOk) {
-      setLcd("API OFFLINE");
-      setError("Vending X API is currently offline. Try again later.");
-      return;
-    }
-
-    setVending(true);
-    setDispensed(null);
-    setError("");
-    setShowLogin(false);
-    setLcd("VENDING...");
-
     setShaking(true);
-    await sleep(500);
-    setShaking(false);
+    setTimeout(() => setShaking(false), 500);
 
-    try {
-      const res = await fetch("/vendingx/api/vend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ stock_type: selected.type }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setLcd(data.error || "ERROR");
-        setError(data.error || "Vend failed");
-      } else {
-        setLcd(`DISPENSED: ${data.name}`);
-        setDispensed(data);
-        await fetchStock();
-        await fetchFeed();
-      }
-    } catch {
-      setLcd("NETWORK ERROR");
-      setError("Network error");
-    }
-    setVending(false);
-  }
-
-  async function copyItem() {
-    if (!dispensed) return;
-    await navigator.clipboard.writeText(dispensed.item);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const cmd = `/vend ${selected.type}`;
+    setLcd(`USE: ${cmd}`);
+    setShowLogin(false);
+    setShowDiscord(true);
   }
 
   /* ── Helpers ── */
@@ -332,8 +252,8 @@ export default function VendingXPage() {
     if (info.count === 0) return;
     setSelected({ slotId, type: typeKey });
     setLcd(`${slotId}: ${info.name}`);
-    setDispensed(null);
     setShowLogin(false);
+    setShowDiscord(false);
   }
 
   function handleKeypad(k: string) {
@@ -389,6 +309,11 @@ export default function VendingXPage() {
                   <span className="text-crimson">&gt; </span>
                   {user.globalName || user.username}
                 </span>
+                {user.hasPremium && (
+                  <span className="border border-blood/60 bg-blood/20 px-1.5 py-0.5 font-display text-[9px] font-bold tracking-wider text-blood">
+                    PREMIUM
+                  </span>
+                )}
               </div>
               <button
                 onClick={async () => {
@@ -415,12 +340,6 @@ export default function VendingXPage() {
           )}
         </div>
       </div>
-
-      {!apiOk && (
-        <div className="mb-4 border border-red-900/60 bg-red-950/30 px-4 py-2 text-center text-xs text-red-400">
-          Vending X API is currently offline — stock display and vending are unavailable.
-        </div>
-      )}
 
       {/* Neon title */}
       <Reveal>
@@ -598,10 +517,9 @@ export default function VendingXPage() {
               className="mx-3 mb-3 min-h-[44px] overflow-hidden border border-crimson/20 bg-black/70"
               style={{ boxShadow: "inset 0 4px 12px rgba(0,0,0,.6)" }}
             >
-              {/* Login prompt (shown when trying to vend without auth) */}
               {showLogin && (
                 <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
-                  <p className="text-sm text-neutral-300">Log in with Discord to vend.</p>
+                  <p className="text-sm text-neutral-300">Log in with Discord to continue.</p>
                   <a href="/support/api/auth/signin?callbackUrl=/vendingx" className="btn-primary btn-sm inline-flex items-center gap-2">
                     <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
                       <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
@@ -611,29 +529,24 @@ export default function VendingXPage() {
                 </div>
               )}
 
-              {dispensed && (
-                <div className="vx-slide-up p-4">
-                  <div className="border border-blood/40 bg-blood/5 p-4" style={{ boxShadow: "0 0 20px rgba(230,0,0,.08)" }}>
-                    <div className="mb-2 font-display text-sm tracking-wider text-blood">
-                      {dispensed.name}
-                    </div>
-                    <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap break-all border border-line bg-black/60 p-3 font-mono text-sm text-neutral-200">
-                      {dispensed.item}
-                    </pre>
-                    <div className="mt-3 flex items-center gap-3">
-                      <button
-                        onClick={copyItem}
-                        className="btn-ghost btn-sm"
-                        style={copied ? { borderColor: "#e60000", color: "#e60000" } : {}}
-                      >
-                        {copied ? "Copied!" : "Copy"}
-                      </button>
-                      <span className="text-xs text-dim">Remaining: {dispensed.remaining}</span>
-                    </div>
-                  </div>
+              {showDiscord && selected && (
+                <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
+                  <p className="text-sm text-neutral-300">
+                    Use <code className="rounded bg-blood/20 px-1.5 py-0.5 font-mono text-xs text-blood">/vend {selected.type}</code> in Discord to get your item.
+                  </p>
+                  <a
+                    href={DISCORD_INVITE}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary btn-sm inline-flex items-center gap-2"
+                  >
+                    <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
+                      <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
+                    </svg>
+                    Open Discord Server
+                  </a>
                 </div>
               )}
-              {error && <div className="p-3 text-center text-sm text-red-400">{error}</div>}
             </div>
 
             {/* Bottom strip */}
@@ -650,62 +563,70 @@ export default function VendingXPage() {
 
         </div>
 
-        {/* ─── Live Feed ── */}
-        <aside className="hidden lg:block">
-          <div className="card sticky top-20 max-h-[calc(100vh-8rem)] overflow-hidden">
+        {/* ─── Sidebar ── */}
+        <aside className="space-y-4">
+          {/* How to vend */}
+          <div className="card sticky top-20">
             <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-blood" style={{ boxShadow: "0 0 6px rgba(230,0,0,.5)" }} />
-              <span className="font-display text-xs font-bold tracking-[0.15em] text-blood">LIVE FEED</span>
+              <span className="h-2 w-2 rounded-full bg-blood" style={{ boxShadow: "0 0 6px rgba(230,0,0,.5)" }} />
+              <span className="font-display text-xs font-bold tracking-[0.15em] text-blood">HOW TO VEND</span>
             </div>
-            <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 12rem)" }}>
-              {feed.length === 0 ? (
-                <div className="p-4 text-center text-xs text-dim">No vends yet</div>
-              ) : (
-                <ul className="divide-y divide-line/50">
-                  {feed.map((f, i) => (
-                    <li key={`${f.time}-${i}`} className="flex items-center gap-2.5 px-3 py-2.5">
-                      <span className="shrink-0 text-blood/60">{slotIcon(f.category)}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-semibold text-neutral-200">{f.username}</div>
-                        <div className="truncate text-[10px] text-muted">
-                          {f.category}
-                          <span className="ml-1 text-dim">via {f.source}</span>
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-[10px] text-dim">{timeAgo(f.time)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <div className="space-y-3 p-4 text-xs text-muted">
+              <div className="flex gap-2">
+                <span className="font-display text-blood">1.</span>
+                <span>Join the Discord server</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-display text-blood">2.</span>
+                <span>Use <code className="rounded bg-blood/10 px-1 font-mono text-blood">/vend</code> to pick an item</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="font-display text-blood">3.</span>
+                <span>Beta items are <span className="text-green-400">free</span> — Premium requires access</span>
+              </div>
+              <a
+                href={DISCORD_INVITE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary btn-sm mt-2 flex w-full items-center justify-center gap-2"
+              >
+                <svg width="14" height="11" viewBox="0 0 71 55" fill="currentColor">
+                  <path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z" />
+                </svg>
+                Join Discord
+              </a>
+            </div>
+          </div>
+
+          {/* Pricing cards */}
+          <div className="card">
+            <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+              <span className="font-display text-xs font-bold tracking-[0.15em] text-blood">UPGRADE</span>
+            </div>
+            <div className="space-y-3 p-4">
+              <a
+                href="/store"
+                className="block border border-blood/30 bg-blood/5 p-3 transition hover:border-blood/60 hover:bg-blood/10"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-xs font-bold tracking-wider text-blood">PREMIUM</span>
+                  <span className="font-display text-sm font-bold text-white">$3</span>
+                </div>
+                <p className="mt-1 text-[10px] text-muted">Unlock premium stock items</p>
+              </a>
+              <a
+                href="/store"
+                className="block border border-line/60 bg-black/40 p-3 transition hover:border-crimson/40 hover:bg-blood/5"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-xs font-bold tracking-wider text-neutral-300">BOT ACCESS</span>
+                  <span className="font-display text-sm font-bold text-white">$50</span>
+                </div>
+                <p className="mt-1 text-[10px] text-muted">Full access to Vending X bot</p>
+              </a>
             </div>
           </div>
         </aside>
-
-        {/* Mobile feed */}
-        <div className="lg:hidden">
-          <div className="card">
-            <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-blood" style={{ boxShadow: "0 0 6px rgba(230,0,0,.5)" }} />
-              <span className="font-display text-xs font-bold tracking-[0.15em] text-blood">LIVE FEED</span>
-            </div>
-            {feed.length === 0 ? (
-              <div className="p-4 text-center text-xs text-dim">No vends yet</div>
-            ) : (
-              <ul className="divide-y divide-line/50">
-                {feed.slice(0, 8).map((f, i) => (
-                  <li key={`m-${f.time}-${i}`} className="flex items-center gap-2.5 px-3 py-2.5">
-                    <span className="shrink-0 text-blood/60">{slotIcon(f.category)}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-semibold text-neutral-200">{f.username}</div>
-                      <div className="truncate text-[10px] text-muted">{f.category}</div>
-                    </div>
-                    <span className="shrink-0 text-[10px] text-dim">{timeAgo(f.time)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
       </div>
 
       <style>{`

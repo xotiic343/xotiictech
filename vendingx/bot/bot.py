@@ -456,6 +456,47 @@ class VendingCog(commands.Cog):
             msg += f" | Ping: {role.mention}"
         await interaction.response.send_message(msg, ephemeral=True)
 
+    @app_commands.command(name="setbuy", description="Post buy/pricing embed (Admin)")
+    @app_commands.default_permissions(administrator=True)
+    async def setbuy(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+    ) -> None:
+        if not interaction.user.guild_permissions.administrator and interaction.user.id != BOT_OWNER_ID:
+            await interaction.response.send_message("No permission.", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="VENDING X — GET ACCESS",
+            description=(
+                "Choose a plan below to unlock features.\n\n"
+                "**Premium** — $3\n"
+                "Unlock all premium stock items.\n\n"
+                "**Bot Access** — $50\n"
+                "Full access to the Vending X bot for your server."
+            ),
+            color=discord.Color.dark_red(),
+        )
+        embed.set_footer(text="Payments handled securely via Stripe")
+
+        view = discord.ui.View(timeout=None)
+        view.add_item(discord.ui.Button(
+            label="Buy Premium — $3",
+            style=discord.ButtonStyle.danger,
+            url=f"{FRONTEND_URL}/vendingx/checkout/premium",
+        ))
+        view.add_item(discord.ui.Button(
+            label="Buy Bot Access — $50",
+            style=discord.ButtonStyle.secondary,
+            url=f"{FRONTEND_URL}/vendingx/checkout/bot-access",
+        ))
+
+        await channel.send(embed=embed, view=view)
+        await interaction.response.send_message(
+            f"Buy embed posted in {channel.mention}", ephemeral=True
+        )
+
     @app_commands.command(name="panel", description="Owner stats")
     async def ownerpanel(self, interaction: discord.Interaction) -> None:
         if interaction.user.id != BOT_OWNER_ID:

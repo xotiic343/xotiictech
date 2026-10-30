@@ -5,7 +5,6 @@ const backendUrl = (
   (process.env.BACKEND_HOSTPORT ? `http://${process.env.BACKEND_HOSTPORT}` : "http://localhost:8000")
 ).replace(/\/$/, "");
 
-const vendingxUrl = (process.env.VENDINGX_URL || "http://localhost:5000").replace(/\/$/, "");
 
 const csp = [
   "default-src 'self'",
@@ -41,8 +40,6 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
-      { source: "/vendingx/api/:path*", destination: `${vendingxUrl}/api/:path*` },
-      { source: "/vendingx/stripe/:path*", destination: `${vendingxUrl}/stripe/:path*` },
     ];
   },
   async headers() {
