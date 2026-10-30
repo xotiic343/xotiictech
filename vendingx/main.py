@@ -20,7 +20,7 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
     raise SystemExit("DISCORD_BOT_TOKEN not set")
 
-API_PORT = int(os.getenv("API_PORT", "5000"))
+API_PORT = int(os.getenv("PORT", os.getenv("API_PORT", "5000")))
 
 Path("stock").mkdir(exist_ok=True)
 Path("data").mkdir(exist_ok=True)
