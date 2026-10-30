@@ -104,6 +104,8 @@ class VendingMachineView(View):
         select = Select(placeholder="Pick a product...", options=options[:25])
         select.callback = self._on_select
         self.add_item(select)
+        self.add_item(self.vend_button)
+        self.add_item(self.refresh_button)
 
     async def _on_select(self, interaction: discord.Interaction) -> None:
         if interaction.user.id != self.user_id:
