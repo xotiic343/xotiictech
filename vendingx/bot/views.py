@@ -34,41 +34,41 @@ def build_machine_embed() -> discord.Embed:
     total = sum(stock.count(st) for st in types)
 
     embed = discord.Embed(
-        title="\U0001f3b0 VENDING X",
+        title="VENDING X",
         description=(
             "```\n"
-            "╔══════════════════════════════════════╗\n"
-            "║     🎰  WELCOME TO VENDING X  🎰    ║\n"
-            "║                                      ║\n"
-            "║   Select a product from the dropdown  ║\n"
-            "║   and press VEND to dispense.         ║\n"
-            "║                                      ║\n"
-            "║        ✨ Premium items available ✨  ║\n"
-            "╚══════════════════════════════════════╝\n"
+            "+-----------------------------------------+\n"
+            "|        WELCOME TO VENDING X             |\n"
+            "|                                         |\n"
+            "|   Select a product from the dropdown    |\n"
+            "|   and press VEND to dispense.           |\n"
+            "|                                         |\n"
+            "|        [P] = Premium items              |\n"
+            "+-----------------------------------------+\n"
             "```"
         ),
-        color=discord.Color.from_rgb(0, 229, 255),
+        color=discord.Color.dark_red(),
     )
 
     regular: list[str] = []
     premium: list[str] = []
     for st, info in types.items():
         cnt = stock.count(st)
-        led = "🟢" if cnt > 0 else ("🟡" if cnt == 0 else "🔴")
-        line = f"{info['emoji']} **{info['name']}** — {led} `{cnt}`"
+        status = f"`{cnt}`" if cnt > 0 else "EMPTY"
+        line = f"**{info['name']}** — {status}"
         if st.startswith("premium_"):
-            premium.append(line)
+            premium.append(f"[P] {line}")
         else:
             regular.append(line)
 
     if regular:
-        embed.add_field(name="📦 Regular Stock", value="\n".join(regular[:10]), inline=True)
+        embed.add_field(name="Regular Stock", value="\n".join(regular[:10]), inline=True)
     if premium:
-        embed.add_field(name="✨ Premium Stock", value="\n".join(premium[:10]), inline=True)
+        embed.add_field(name="Premium Stock", value="\n".join(premium[:10]), inline=True)
 
     embed.add_field(
-        name="🎰 How to Vend",
-        value="1️⃣ Select a product\n2️⃣ Press **VEND**\n3️⃣ Check your DMs 📬",
+        name="How to Vend",
+        value="1. Select a product\n2. Press **VEND**\n3. Check your DMs",
         inline=False,
     )
     embed.set_footer(text=f"Total items: {total} | Premium access required")
@@ -92,20 +92,18 @@ class VendingMachineView(View):
         options: list[discord.SelectOption] = []
         for st, info in types.items():
             cnt = stock.count(st)
-            status = "🟢" if cnt > 0 else "🔴"
             is_prem = st.startswith("premium_")
-            tag = " ✨" if is_prem else ""
+            tag = " [P]" if is_prem else ""
             options.append(
                 discord.SelectOption(
                     label=f"{info['name']}{tag}",
                     value=st,
                     description=f"{info['description']} ({cnt} left)",
-                    emoji="✨" if is_prem else info["emoji"],
                 )
             )
 
         select = Select(
-            placeholder="🛒 Select a product to vend…",
+            placeholder="Select a product to vend...",
             options=options[:25],
             custom_id="vx_select",
         )
@@ -114,7 +112,7 @@ class VendingMachineView(View):
 
     async def _on_select(self, interaction: discord.Interaction) -> None:
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Not your machine!", ephemeral=True)
+            await interaction.response.send_message("Not your machine.", ephemeral=True)
             return
 
         self.selected_slot = interaction.values[0]
@@ -122,61 +120,59 @@ class VendingMachineView(View):
         cnt = stock.count(self.selected_slot)
 
         embed = discord.Embed(
-            title=f"🛒 Selected: {info.get('emoji', '📦')} {info.get('name', self.selected_slot)}",
+            title=f"Selected: {info.get('name', self.selected_slot)}",
             description=f"**Stock:** `{cnt}`\n\nPress **VEND** below to dispense.",
-            color=discord.Color.green(),
+            color=discord.Color.dark_red(),
         )
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="VEND", style=discord.ButtonStyle.success, emoji="🎰", row=1)
+    @discord.ui.button(label="VEND", style=discord.ButtonStyle.danger, row=1)
     async def vend_button(self, interaction: discord.Interaction, button: Button) -> None:
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Not your machine!", ephemeral=True)
+            await interaction.response.send_message("Not your machine.", ephemeral=True)
             return
 
         if not self.selected_slot:
-            await interaction.response.send_message("❌ Select a product first!", ephemeral=True)
+            await interaction.response.send_message("Select a product first.", ephemeral=True)
             return
 
         if not access.has_access(self.bot, self.db, interaction.user.id):
             embed = discord.Embed(
-                title="🔒 Access Required",
+                title="Access Required",
                 description=(
                     f"You need one of:\n"
-                    f"• <@&{access.PREMIUM_ROLE_ID}> role\n"
-                    f"• $3 one-time purchase on the website\n"
-                    f"• Active server boost"
+                    f"- <@&{access.PREMIUM_ROLE_ID}> role\n"
+                    f"- $3 one-time purchase on the website\n"
+                    f"- Active server boost"
                 ),
-                color=discord.Color.red(),
+                color=discord.Color.dark_red(),
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         on_cd, remaining = cooldowns.check(interaction.user.id, "bot")
         if on_cd:
-            await interaction.response.send_message(f"⏳ Wait `{remaining}s`", ephemeral=True)
+            await interaction.response.send_message(f"**COOLDOWN** — Wait `{remaining}s`", ephemeral=True)
             return
 
         await interaction.response.defer()
 
         types = _stock_types()
-        info = types.get(self.selected_slot, {"name": self.selected_slot, "emoji": "📦", "color": 0x95A5A6})
+        info = types.get(self.selected_slot, {"name": self.selected_slot, "color": 0x95A5A6})
 
-        # Dispensing animation
-        anim = discord.Embed(title="🎰 Vending…", description="```\n   📦 ➡️ 🎁   \n```", color=discord.Color.yellow())
+        anim = discord.Embed(title="Vending...", description="```\nDispensing item...\n```", color=discord.Color.dark_red())
         msg = await interaction.followup.send(embed=anim)
         await asyncio.sleep(0.8)
 
         entry = stock.dispense(self.selected_slot)
         if not entry:
-            fail = discord.Embed(title="❌ Out of Stock!", description=f"**{info['name']}** is empty.", color=discord.Color.red())
+            fail = discord.Embed(title="Out of Stock", description=f"**{info['name']}** is empty.", color=discord.Color.dark_red())
             await msg.edit(embed=fail)
             return
 
         cooldowns.set(interaction.user.id, "bot")
         remaining_count = stock.count(self.selected_slot)
 
-        # Log to DB
         from bot.db import get_db
         db = get_db()
         db.execute(
@@ -191,22 +187,21 @@ class VendingMachineView(View):
         db.execute("UPDATE users SET total_generated = total_generated + 1 WHERE id = ?", (interaction.user.id,))
         db.commit()
 
-        # Try DM delivery
         success = discord.Embed(
-            title=f"🎉 Vended: {info['emoji']} {info['name']}",
-            description=f"```\n   🎰 SUCCESSFUL VEND!   \n```\n**Remaining:** `{remaining_count}`",
-            color=discord.Color.green(),
+            title=f"Vended: {info['name']}",
+            description=f"**Remaining:** `{remaining_count}`",
+            color=discord.Color.dark_red(),
         )
 
         delivered = False
         try:
-            dm_embed = discord.Embed(title=f"🎁 {info['name']}", description=f"```\n{entry}\n```", color=discord.Color.green())
-            dm_embed.set_footer(text="From Vending X")
+            dm_embed = discord.Embed(title=info["name"], description=f"```\n{entry}\n```", color=discord.Color.dark_red())
+            dm_embed.set_footer(text="Vending X by XotiicTech")
             await interaction.user.send(embed=dm_embed)
-            success.add_field(name="📬 Delivery", value="Sent to your DMs!", inline=False)
+            success.add_field(name="Delivery", value="Sent to your DMs.", inline=False)
             delivered = True
         except discord.Forbidden:
-            success.add_field(name="⚠️ DM Failed", value="Enable DMs! Item sent below.", inline=False)
+            success.add_field(name="DM Failed", value="Enable DMs. Item sent below.", inline=False)
             await interaction.followup.send(f"```\n{entry}\n```", ephemeral=True)
             delivered = True
 
@@ -222,10 +217,10 @@ class VendingMachineView(View):
 
         self._refresh_items()
 
-    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, emoji="🔄", row=1)
+    @discord.ui.button(label="Refresh", style=discord.ButtonStyle.secondary, row=1)
     async def refresh_button(self, interaction: discord.Interaction, button: Button) -> None:
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("❌ Not your machine!", ephemeral=True)
+            await interaction.response.send_message("Not your machine.", ephemeral=True)
             return
         self._refresh_items()
         await interaction.response.edit_message(embed=build_machine_embed(), view=self)

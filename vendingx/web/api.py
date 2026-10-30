@@ -68,7 +68,6 @@ async def get_feed() -> JSONResponse:
         feed.append({
             "username": username,
             "category": info.get("name", stype),
-            "emoji": info.get("emoji", "📦"),
             "source": source,
             "time": ts,
         })
@@ -83,7 +82,6 @@ async def get_stock() -> JSONResponse:
     for st, info in STOCK_TYPES.items():
         result[st] = {
             "name": info["name"],
-            "emoji": info["emoji"],
             "description": info["description"],
             "count": stock.count(st),
             "premium": st.startswith("premium_"),
@@ -157,6 +155,132 @@ async def vend(request: Request) -> JSONResponse:
     })
 
 
+def _check_admin(request: Request) -> bool:
+    """Owner OAuth session OR X-Api-Key header."""
+    key = request.headers.get("x-api-key")
+    configured_key = os.getenv("API_KEY", "")
+    if key and configured_key and key == configured_key:
+        return True
+    user = _get_session_user(request)
+    return bool(user and user["user_id"] == BOT_OWNER_ID)
+
+
+@router.get("/admin/stats")
+async def admin_stats(request: Request) -> JSONResponse:
+    """Aggregate stats for the admin panel."""
+    if not _check_admin(request):
+        return JSONResponse({"error": "Owner only"}, status_code=403)
+
+    from bot.bot import STOCK_TYPES
+
+    db = get_db()
+    total_users = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    total_vends = db.execute("SELECT COUNT(*) FROM stock_usage").fetchone()[0]
+    total_payments = db.execute(
+        "SELECT COUNT(*) FROM stripe_payments WHERE status = 'paid'"
+    ).fetchone()[0]
+    vends_today = db.execute(
+        "SELECT COUNT(*) FROM stock_usage WHERE date(generated_at) = date('now')"
+    ).fetchone()[0]
+    total_stock = sum(stock.count(st) for st in STOCK_TYPES)
+    top = db.execute(
+        "SELECT stock_type, COUNT(*) as cnt FROM stock_usage "
+        "GROUP BY stock_type ORDER BY cnt DESC LIMIT 10"
+    ).fetchall()
+
+    return JSONResponse({
+        "total_users": total_users,
+        "total_vends": total_vends,
+        "total_payments": total_payments,
+        "vends_today": vends_today,
+        "total_stock": total_stock,
+        "top_types": [
+            {"type": t, "name": STOCK_TYPES.get(t, {}).get("name", t), "count": c}
+            for t, c in top
+        ],
+    })
+
+
+@router.get("/admin/users")
+async def admin_users(request: Request) -> JSONResponse:
+    """Top users by vend count."""
+    if not _check_admin(request):
+        return JSONResponse({"error": "Owner only"}, status_code=403)
+
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, username, total_generated, last_generated "
+        "FROM users ORDER BY total_generated DESC LIMIT 50"
+    ).fetchall()
+    return JSONResponse([
+        {"id": r[0], "username": r[1], "total_generated": r[2], "last_generated": r[3]}
+        for r in rows
+    ])
+
+
+@router.get("/admin/config")
+async def get_config(request: Request) -> JSONResponse:
+    """Per-server bot config."""
+    if not _check_admin(request):
+        return JSONResponse({"error": "Owner only"}, status_code=403)
+
+    db = get_db()
+    rows = db.execute(
+        "SELECT server_id, log_channel_id, announce_channel_id, announce_role_id, "
+        "auto_update_channel_id, auto_update_role_id FROM vending_configs"
+    ).fetchall()
+    return JSONResponse([
+        {
+            "server_id": r[0], "log_channel_id": r[1],
+            "announce_channel_id": r[2], "announce_role_id": r[3],
+            "auto_update_channel_id": r[4], "auto_update_role_id": r[5],
+        }
+        for r in rows
+    ])
+
+
+@router.post("/admin/config")
+async def set_config(request: Request) -> JSONResponse:
+    """Upsert a server's config row."""
+    if not _check_admin(request):
+        return JSONResponse({"error": "Owner only"}, status_code=403)
+
+    body = await request.json()
+    server_id = body.get("server_id")
+    if not server_id:
+        return JSONResponse({"error": "server_id required"}, status_code=400)
+
+    cols = ("log_channel_id", "announce_channel_id", "announce_role_id",
+            "auto_update_channel_id", "auto_update_role_id")
+    vals = [body.get(c) for c in cols]
+
+    db = get_db()
+    db.execute(
+        "INSERT INTO vending_configs (server_id, " + ", ".join(cols) + ") "
+        "VALUES (?, " + ", ".join("?" for _ in cols) + ") "
+        "ON CONFLICT(server_id) DO UPDATE SET "
+        + ", ".join(f"{c} = excluded.{c}" for c in cols),
+        (server_id, *vals),
+    )
+    db.commit()
+    return JSONResponse({"ok": True})
+
+
+@router.get("/admin/banned")
+async def admin_banned(request: Request) -> JSONResponse:
+    """Banned users list."""
+    if not _check_admin(request):
+        return JSONResponse({"error": "Owner only"}, status_code=403)
+
+    db = get_db()
+    rows = db.execute(
+        "SELECT user_id, reason, banned_at FROM banned_users ORDER BY banned_at DESC"
+    ).fetchall()
+    return JSONResponse([
+        {"user_id": r[0], "reason": r[1], "banned_at": r[2]} for r in rows
+    ])
+
+
 @router.post("/admin/upload")
 async def admin_upload(
     request: Request,
@@ -164,8 +288,7 @@ async def admin_upload(
     file: UploadFile = File(...),
 ) -> JSONResponse:
     """Upload stock entries (owner only)."""
-    user = _get_session_user(request)
-    if not user or user["user_id"] != BOT_OWNER_ID:
+    if not _check_admin(request):
         return JSONResponse({"error": "Owner only"}, status_code=403)
 
     if not file.filename or not file.filename.endswith(".txt"):

@@ -10,6 +10,7 @@ const NAV: [string, string][] = [
   ["/xotiic", "Dashboard"],
   ["/xotiic/bots", "Bots"],
   ["/xotiic/security", "Security X"],
+  ["/xotiic/vendingx", "Vending X"],
   ["/xotiic/inquiries", "Commissions"],
   ["/xotiic/orders", "Orders"],
   ["/xotiic/products", "Products"],
