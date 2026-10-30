@@ -5,6 +5,8 @@ const backendUrl = (
   (process.env.BACKEND_HOSTPORT ? `http://${process.env.BACKEND_HOSTPORT}` : "http://localhost:8000")
 ).replace(/\/$/, "");
 
+const vendingxUrl = (process.env.VENDINGX_URL || "http://localhost:5000").replace(/\/$/, "");
+
 const csp = [
   "default-src 'self'",
   // Next.js injects small inline bootstrap scripts; the boot-sequence guard is inline too.
@@ -37,7 +39,12 @@ const nextConfig = {
   // Same-origin proxy: browser → xotiictech.com/api/* → FastAPI (keeps auth cookies first-party).
   // /support's own API lives at /support/api/* (Next.js route handlers), so it never hits this proxy.
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+    return [
+      { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
+      { source: "/vendingx/api/:path*", destination: `${vendingxUrl}/api/:path*` },
+      { source: "/vendingx/auth/:path*", destination: `${vendingxUrl}/auth/:path*` },
+      { source: "/vendingx/stripe/:path*", destination: `${vendingxUrl}/stripe/:path*` },
+    ];
   },
   async headers() {
     return [

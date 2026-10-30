@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vending X — Xotiic Tech</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ═══ AUTH GATE ═══ -->
+  <div id="auth-gate" class="auth-gate">
+    <div class="auth-card">
+      <div class="neon-sign neon-sign--small">VENDING X</div>
+      <p>Log in with Discord to access the vending machine.</p>
+      <button id="btn-login" class="btn btn--discord" onclick="location.href='/auth/login'">
+        <svg width="20" height="20" viewBox="0 0 71 55" fill="white"><path d="M60.1 4.9A58.5 58.5 0 0045.4.2a.2.2 0 00-.2.1 40.8 40.8 0 00-1.8 3.7 54 54 0 00-16.2 0A37.3 37.3 0 0025.4.3a.2.2 0 00-.2-.1A58.4 58.4 0 0010.5 4.9.2.2 0 0010.4 5C1.5 18.7-.9 32 .3 45.2v.1a58.7 58.7 0 0017.9 9 .2.2 0 00.3-.1 42 42 0 003.6-5.9.2.2 0 00-.1-.3 38.7 38.7 0 01-5.5-2.6.2.2 0 01 0-.4l1.1-.9a.2.2 0 01.2 0 41.9 41.9 0 0035.6 0 .2.2 0 01.2 0l1.1.9a.2.2 0 010 .4 36.4 36.4 0 01-5.5 2.6.2.2 0 00-.1.3 47.2 47.2 0 003.6 5.9.2.2 0 00.3.1 58.5 58.5 0 0018-9v-.1c1.4-14.8-2.3-27.7-9.9-39.1a.2.2 0 00-.1-.1zM23.7 37.1c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.8 6.9-6.2 6.9zm22.9 0c-3.4 0-6.2-3.1-6.2-6.9s2.7-6.9 6.2-6.9 6.3 3.1 6.2 6.9c0 3.8-2.7 6.9-6.2 6.9z"/></svg>
+        Login with Discord
+      </button>
+      <a href="/stripe/create-checkout" id="btn-buy" class="btn btn--stripe" style="display:none">
+        Buy Access — $3
+      </a>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN MACHINE ═══ -->
+  <div id="machine-wrap" class="machine-wrap" style="display:none">
+    <!-- Neon sign -->
+    <div class="neon-sign" aria-label="Vending X">VENDING X</div>
+
+    <div class="machine">
+      <!-- Glass panel -->
+      <div class="glass-panel">
+        <div class="glass-reflection"></div>
+
+        <!-- 3×4 Product grid -->
+        <div class="slot-grid" id="slot-grid" role="grid" aria-label="Product slots">
+          <!-- Slots injected by JS -->
+        </div>
+      </div>
+
+      <!-- Control panel -->
+      <div class="control-panel">
+        <!-- Coin / card slot -->
+        <div class="coin-slot" aria-hidden="true">
+          <div class="coin-slit"></div>
+          <span class="coin-label">INSERT COIN</span>
+        </div>
+
+        <!-- Keypad -->
+        <div class="keypad" role="group" aria-label="Slot keypad">
+          <button class="key" data-key="A" aria-label="Row A">A</button>
+          <button class="key" data-key="B" aria-label="Row B">B</button>
+          <button class="key" data-key="C" aria-label="Row C">C</button>
+          <button class="key" data-key="1" aria-label="Column 1">1</button>
+          <button class="key" data-key="2" aria-label="Column 2">2</button>
+          <button class="key" data-key="3" aria-label="Column 3">3</button>
+          <button class="key" data-key="4" aria-label="Column 4">4</button>
+          <button class="key key--clear" data-key="CLR" aria-label="Clear">CLR</button>
+        </div>
+
+        <!-- Display -->
+        <div class="lcd-display" id="lcd" aria-live="polite">SELECT A SLOT</div>
+
+        <!-- VEND button -->
+        <button class="vend-btn" id="btn-vend" aria-label="Vend selected product">
+          <span class="vend-btn__face">VEND</span>
+        </button>
+      </div>
+
+      <!-- Dispensing tray -->
+      <div class="tray" id="tray" aria-label="Dispensing tray">
+        <div class="tray__flap" id="tray-flap"></div>
+        <div class="tray__item" id="tray-item" style="display:none">
+          <div class="item-card" id="item-card">
+            <div class="item-card__header">🎁 YOUR ITEM</div>
+            <pre class="item-card__payload" id="item-payload"></pre>
+            <button class="btn btn--copy" id="btn-copy" aria-label="Copy to clipboard">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User bar -->
+    <div class="user-bar" id="user-bar">
+      <div class="user-bar__left">
+        <img id="user-avatar" class="user-bar__avatar" src="" alt="">
+        <span id="user-name" class="user-bar__name"></span>
+        <span id="user-badge" class="badge badge--premium" style="display:none">PREMIUM</span>
+      </div>
+      <div class="user-bar__right">
+        <button class="btn btn--small btn--outline" id="btn-admin" style="display:none" onclick="showAdmin()">Admin</button>
+        <button class="btn btn--small btn--outline" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <footer class="footer">Powered by <strong>Xotiic Tech</strong></footer>
+  </div>
+
+  <!-- ═══ ADMIN MODAL ═══ -->
+  <dialog id="admin-dialog" class="modal">
+    <div class="modal__inner">
+      <h2>📦 Upload Stock</h2>
+      <form id="upload-form">
+        <label>Stock Type
+          <select id="upload-type"></select>
+        </label>
+        <label>File (.txt)
+          <input type="file" id="upload-file" accept=".txt" required>
+        </label>
+        <div class="drop-zone" id="drop-zone">
+          <span>Drag & drop .txt file here</span>
+        </div>
+        <button type="submit" class="btn btn--discord">Upload</button>
+        <p id="upload-result"></p>
+      </form>
+      <button class="modal__close" onclick="document.getElementById('admin-dialog').close()">✕</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

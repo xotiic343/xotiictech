@@ -45,6 +45,7 @@ export function Footer({ site }: { site: SiteData | null }) {
           title="Resources"
           links={[
             ["/tools", "Free Tools"],
+            ["/vendingx", "Vending X"],
             ["/docs", "Docs & FAQ"],
             ["/blog", "Blog"],
             ["/changelog", "Changelog"],

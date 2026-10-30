@@ -19,6 +19,11 @@ frontend/out/
 *.tsbuildinfo
 next-env.d.ts
 
+# vendingx runtime
+vendingx/data/
+vendingx/stock/
+vendingx/*.db
+
 # os / editors
 .DS_Store
 Thumbs.db
