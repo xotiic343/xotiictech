@@ -127,6 +127,24 @@ def main() -> None:
             version="1.4.0", is_published=True, is_featured=True, is_bot=True, bot_id=bot.id, media=[],
         )
         upsert_by_slug(
+            db, Product, "vendingx-premium",
+            name="Vending X — Premium Access",
+            tagline="Unlock all premium stock items in the Vending X bot.",
+            description="## Premium Access\n\nOne-time payment to unlock all premium stock items in the Vending X vending machine bot. Instant access after purchase.",
+            features=["All premium stock items", "Instant access", "One-time payment", "Discord role"],
+            category="discord_bots", sell_type="license", price_cents=300, currency="usd",
+            is_published=True, is_featured=False, media=[],
+        )
+        upsert_by_slug(
+            db, Product, "vendingx-bot-access",
+            name="Vending X — Bot Access",
+            tagline="Full access to the Vending X bot for your own Discord server.",
+            description="## Bot Access\n\nGet the full Vending X bot for your own server. Includes all features, updates, and a complete setup guide.\n\n- Full bot source\n- Setup guide\n- All commands\n- Stock management\n- Auto-update panels",
+            features=["Full bot access", "All commands", "Stock management", "Auto-update panels", "Setup guide", "Updates included"],
+            category="discord_bots", sell_type="download", price_cents=5000, currency="usd",
+            is_published=True, is_featured=True, media=[],
+        )
+        upsert_by_slug(
             db, BlogPost, "hello-world",
             title="XotiicTech is online",
             excerpt="The new XotiicTech platform is live: store, bots, docs and more.",

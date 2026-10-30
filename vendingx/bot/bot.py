@@ -6,6 +6,7 @@ import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -19,6 +20,8 @@ log = logging.getLogger("vendingx.bot")
 
 BOT_OWNER_ID = int(os.getenv("BOT_OWNER_ID", "1302203907782606880"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://xotiictech.net")
+API_URL = os.getenv("API_URL", "https://xotiictech-api.onrender.com")
+VENDINGX_BOT_SECRET = os.getenv("VENDINGX_BOT_SECRET", "")
 
 STOCK_DIR = Path("stock")
 
@@ -46,6 +49,36 @@ STOCK_TYPES: dict[str, dict] = load_stock_types()
 def refresh_stock_types() -> None:
     global STOCK_TYPES
     STOCK_TYPES = load_stock_types()
+
+
+async def sync_stock_to_api() -> None:
+    """Push all local stock types and items to the backend API."""
+    if not VENDINGX_BOT_SECRET or not API_URL:
+        log.info("VENDINGX_BOT_SECRET or API_URL not set, skipping API sync")
+        return
+    refresh_stock_types()
+    types_payload: dict[str, dict] = {}
+    stock_payload: dict[str, list[str]] = {}
+    for key, info in STOCK_TYPES.items():
+        types_payload[key] = {
+            "name": info["name"],
+            "description": info.get("description", ""),
+            "is_premium": key.startswith("premium_"),
+        }
+        stock_payload[key] = stock.read_entries(key)
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{API_URL}/api/vendingx/sync",
+                json={"types": types_payload, "stock": stock_payload},
+                headers={"Authorization": f"Bearer {VENDINGX_BOT_SECRET}"},
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                data = await resp.json()
+                log.info("API sync: %s", data)
+    except Exception:
+        log.exception("Failed to sync stock to API")
 
 
 def _type_choices() -> list[app_commands.Choice[str]]:

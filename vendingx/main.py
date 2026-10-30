@@ -57,6 +57,9 @@ async def on_ready() -> None:
     if not auto_update.is_running():
         auto_update.start()
 
+    from bot.bot import sync_stock_to_api
+    await sync_stock_to_api()
+
     await bot.change_presence(
         activity=discord.Activity(
             type=discord.ActivityType.watching,
@@ -94,6 +97,12 @@ async def auto_update() -> None:
                 )
     except Exception:
         log.exception("Auto-update failed")
+
+    try:
+        from bot.bot import sync_stock_to_api
+        await sync_stock_to_api()
+    except Exception:
+        log.exception("API sync failed")
 
 
 async def _post_update(

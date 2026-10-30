@@ -12,6 +12,7 @@ from app.models.content import (
 from app.models.security import PullJob, SecurityGuild, SecurityJob, SecurityLog, SecurityMember
 from app.models.system import AuditLog, PageView, SiteSetting
 from app.models.users import MagicLinkToken, User
+from app.models.vendingx import VendingItem, VendingLog, VendingStock
 
 __all__ = [
     "Base",
@@ -41,4 +42,7 @@ __all__ = [
     "SecurityJob",
     "SecurityLog",
     "SecurityMember",
+    "VendingItem",
+    "VendingLog",
+    "VendingStock",
 ]

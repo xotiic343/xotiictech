@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     security_client_secret: str = ""
     security_token_key: str = ""  # Fernet key for stored member tokens; derived from SECRET_KEY when empty
 
+    # --- Vending X ---
+    vendingx_bot_secret: str = ""  # shared secret so the bot can push stock / vend via API
+    vendingx_cooldown_seconds: int = 30
+
     # --- scheduler ---
     enable_scheduler: bool = True
     sync_on_startup: bool = True

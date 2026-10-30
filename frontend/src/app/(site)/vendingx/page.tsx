@@ -207,7 +207,9 @@ export default function VendingXPage() {
   const [showLogin, setShowLogin] = useState(false);
   const [showDiscord, setShowDiscord] = useState(false);
   const [vendPhase, setVendPhase] = useState<"idle" | "dispensing" | "tray" | "done">("idle");
-  const [dispensedProduct, setDispensedProduct] = useState<{ type: string; name: string } | null>(null);
+  const [dispensedProduct, setDispensedProduct] = useState<{ type: string; name: string; content?: string } | null>(null);
+  const [vendError, setVendError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const keyBuf = useRef("");
 
   /* ── Auth check (NextAuth) ── */
@@ -280,9 +282,9 @@ export default function VendingXPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  /* ── Vend (redirects to Discord) ── */
+  /* ── Vend (calls backend API) ── */
 
-  function doVend() {
+  async function doVend() {
     if (!selected || vendPhase !== "idle") return;
 
     if (!user) {
@@ -292,26 +294,60 @@ export default function VendingXPage() {
     }
 
     const info = stock[selected.type];
-    setDispensedProduct({ type: selected.type, name: info?.name || selected.type });
+    const productName = info?.name || selected.type;
+    setDispensedProduct({ type: selected.type, name: productName });
     setShowLogin(false);
     setShowDiscord(false);
+    setVendError(null);
+    setCopied(false);
     setVendPhase("dispensing");
     setShaking(true);
     setLcd("DISPENSING...");
 
     setTimeout(() => setShaking(false), 600);
 
-    setTimeout(() => {
-      setVendPhase("tray");
-      setLcd("ITEM DISPENSED");
-    }, 900);
+    try {
+      const res = await fetch("/vendingx/api/vend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ stock_key: selected.type }),
+      });
 
-    setTimeout(() => {
-      setVendPhase("done");
-      setShowDiscord(true);
-      const cmd = `/vend ${selected.type}`;
-      setLcd(`USE: ${cmd}`);
-    }, 2200);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setVendPhase("idle");
+        setDispensedProduct(null);
+        setLcd(data.error?.toUpperCase() || "VEND FAILED");
+        setVendError(data.error || "Vend failed");
+        return;
+      }
+
+      setDispensedProduct({ type: selected.type, name: productName, content: data.content });
+
+      if (data.remaining !== undefined && info) {
+        setStock((prev) => ({
+          ...prev,
+          [selected.type]: { ...info, count: data.remaining },
+        }));
+      }
+
+      setTimeout(() => {
+        setVendPhase("tray");
+        setLcd("ITEM DISPENSED");
+      }, 400);
+
+      setTimeout(() => {
+        setVendPhase("done");
+        setLcd("COLLECT YOUR ITEM");
+      }, 1500);
+    } catch {
+      setVendPhase("idle");
+      setDispensedProduct(null);
+      setLcd("CONNECTION ERROR");
+      setVendError("Could not reach the server");
+    }
   }
 
   /* ── Helpers ── */
@@ -752,20 +788,54 @@ export default function VendingXPage() {
                     style={{ background: "repeating-linear-gradient(90deg, transparent 0px, transparent 8px, rgba(230,0,0,.1) 8px, rgba(230,0,0,.1) 9px)" }}
                   />
 
-                  {/* Dispensed product popup */}
+                  {/* Dispensed product popup with content */}
                   {(vendPhase === "tray" || vendPhase === "done") && dispensedProduct && (
-                    <div className="vx-tray-popup flex items-center gap-4 border-b border-crimson/10 p-5">
-                      <div
-                        className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-blood/40 bg-blood/10"
-                        style={{ boxShadow: "0 0 20px rgba(230,0,0,.15), inset 0 0 10px rgba(0,0,0,.3)" }}
-                      >
-                        <ProductImage type={dispensedProduct.type} name={dispensedProduct.name} className="h-10 w-10" />
+                    <div className="vx-tray-popup p-5">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg border border-blood/40 bg-blood/10"
+                          style={{ boxShadow: "0 0 20px rgba(230,0,0,.15), inset 0 0 10px rgba(0,0,0,.3)" }}
+                        >
+                          <ProductImage type={dispensedProduct.type} name={dispensedProduct.name} className="h-10 w-10" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-display text-sm font-bold tracking-wider text-blood">{dispensedProduct.name}</div>
+                          <div className="mt-0.5 text-xs text-green-400/80">Item dispensed!</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-display text-sm font-bold tracking-wider text-blood">{dispensedProduct.name}</div>
-                        <div className="mt-0.5 text-xs text-green-400/80">Item dispensed!</div>
-                        <div className="mt-1 text-[10px] text-muted">Collect it in Discord below</div>
-                      </div>
+
+                      {dispensedProduct.content && (
+                        <div className="mt-3">
+                          <div
+                            className="flex items-center justify-between rounded border border-crimson/20 bg-black px-3 py-2.5"
+                            style={{ boxShadow: "inset 0 2px 6px rgba(0,0,0,.5)" }}
+                          >
+                            <code className="flex-1 select-all break-all font-mono text-xs text-green-400">
+                              {dispensedProduct.content}
+                            </code>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(dispensedProduct.content!);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              }}
+                              className="ml-3 flex-shrink-0 rounded border border-crimson/20 bg-blood/10 px-2 py-1 font-display text-[9px] tracking-wider text-blood transition hover:bg-blood/20"
+                            >
+                              {copied ? "COPIED" : "COPY"}
+                            </button>
+                          </div>
+                          <p className="mt-2 text-[10px] text-muted">
+                            Save this now — it won&apos;t be shown again.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Error message */}
+                  {vendError && vendPhase === "idle" && (
+                    <div className="vx-slide-up p-5 text-center">
+                      <p className="text-sm text-red-400">{vendError}</p>
                     </div>
                   )}
 
@@ -775,23 +845,6 @@ export default function VendingXPage() {
                       <a href="/support/api/auth/signin?callbackUrl=/vendingx" className="btn-primary btn-sm inline-flex items-center gap-2">
                         {discordSvg}
                         Login with Discord
-                      </a>
-                    </div>
-                  )}
-
-                  {showDiscord && selected && (
-                    <div className="vx-slide-up flex flex-col items-center gap-3 p-6">
-                      <p className="text-sm text-neutral-300">
-                        Use <code className="rounded bg-blood/20 px-1.5 py-0.5 font-mono text-xs text-blood">/vend {selected.type}</code> in Discord to get your item.
-                      </p>
-                      <a
-                        href={DISCORD_INVITE}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-primary btn-sm inline-flex items-center gap-2"
-                      >
-                        {discordSvg}
-                        Open Discord Server
                       </a>
                     </div>
                   )}
