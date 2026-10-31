@@ -25,8 +25,25 @@ configure_logging()
 log = logging.getLogger("xotiictech")
 
 
+def run_migrations() -> None:
+    """Apply pending Alembic migrations, so a deploy works even if the start command skips them."""
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    root = Path(__file__).resolve().parents[1]
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "alembic"))
+    cfg.attributes["configure_logger"] = False
+    command.upgrade(cfg, "head")
+    log.info("Database migrations are up to date")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.run_migrations_on_startup:
+        run_migrations()
     if settings.enable_scheduler:
         start_scheduler(sync_on_startup=settings.sync_on_startup)
     yield

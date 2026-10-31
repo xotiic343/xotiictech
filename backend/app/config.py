@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     vendingx_bot_secret: str = ""  # shared secret so the bot can push stock / vend via API
     vendingx_cooldown_seconds: int = 30
 
+    run_migrations_on_startup: bool = True
+
     # --- scheduler ---
     enable_scheduler: bool = True
     sync_on_startup: bool = True

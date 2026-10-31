@@ -21,12 +21,23 @@ router = APIRouter(prefix="/vendingx", tags=["vendingx"])
 _cooldowns: dict[str, float] = {}
 
 
+def _clean_secret(value: str) -> str:
+    # Env values pasted into dashboards often pick up spaces or quotes.
+    return value.strip().strip("\"'").strip()
+
+
 def _check_bot_secret(request: Request) -> None:
     """Server-to-server auth for the Discord bot and the website's vend route. Browsers never hold this
     secret, so a call that reaches the API through the public /api proxy cannot pass it."""
-    expected = settings.vendingx_bot_secret
+    expected = _clean_secret(settings.vendingx_bot_secret)
     auth = request.headers.get("authorization", "")
-    if not expected or not constant_time_equals(auth, f"Bearer {expected}"):
+    got = _clean_secret(auth[7:]) if auth[:7].lower() == "bearer " else ""
+    if not expected or not got or not constant_time_equals(got, expected):
+        # Lengths only, never values: enough to spot a missing, truncated or padded secret.
+        log.warning(
+            "Vending X secret rejected on %s: received %d chars, API has %d chars configured",
+            request.url.path, len(got), len(expected),
+        )
         raise HTTPException(403, "Invalid bot secret")
 
 
