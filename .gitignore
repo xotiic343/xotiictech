@@ -31,3 +31,7 @@ vendingx.zip
 Thumbs.db
 .vscode/
 .idea/
+
+# build output + stock lists (never commit stock)
+dist/
+frontend/src/app/(site)/vendingx/api/stock/*.txt

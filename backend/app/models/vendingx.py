@@ -17,6 +17,7 @@ class VendingStock(Base):
     description: Mapped[str] = mapped_column(String(300), default="")
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    icon_url: Mapped[str | None] = mapped_column(String(1000))
 
 
 class VendingItem(TimestampMixin, Base):
@@ -27,6 +28,9 @@ class VendingItem(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     stock_key: Mapped[str] = mapped_column(String(80), index=True)
     content: Mapped[str] = mapped_column(Text)
+    # "bot" rows mirror the Discord bot's stock files and are reconciled on every sync; "admin" rows were
+    # uploaded in the admin panel and only exist here.
+    origin: Mapped[str] = mapped_column(String(10), default="bot", server_default="bot")
     dispensed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     dispensed_to: Mapped[str | None] = mapped_column(String(80))
     dispensed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

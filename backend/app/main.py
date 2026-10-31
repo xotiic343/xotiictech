@@ -17,6 +17,7 @@ from app.routers.admin import catalog as admin_catalog
 from app.routers.admin import inbox as admin_inbox
 from app.routers.admin import security as admin_security
 from app.routers.admin import site as admin_site
+from app.routers.admin import vendingx as admin_vendingx
 from app.routers.public import auth, bots, content, security, site, store, vendingx
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
@@ -36,7 +37,8 @@ app = FastAPI(
     title="XotiicTech API",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url=None if settings.is_production else "/api/docs",
+    # Not /api/docs: that path is the public Docs & FAQ list, and FastAPI's own route would shadow it.
+    docs_url=None if settings.is_production else "/api/swagger",
     redoc_url=None,
     openapi_url=None if settings.is_production else "/api/openapi.json",
 )
@@ -83,5 +85,6 @@ for r in (
     admin_inbox.router,
     admin_security.router,
     admin_site.router,
+    admin_vendingx.router,
 ):
     app.include_router(r, prefix="/api")

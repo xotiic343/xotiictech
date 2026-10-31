@@ -5,7 +5,7 @@ import { env } from "./env";
 
 const API = "https://discord.com/api/v10";
 
-export type DiscordMember = { roles: string[] };
+export type DiscordMember = { roles: string[]; premium_since?: string | null };
 
 async function discordFetch(path: string) {
   return fetch(`${API}${path}`, {

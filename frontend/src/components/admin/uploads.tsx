@@ -17,7 +17,7 @@ const SIGN_BATCH = 50; // presigned URLs requested per call
  * straight to the storage bucket in parts (never through the website or API), so big videos and zips work.
  * On the local dev backend it falls back to the original single request.
  */
-async function uploadFile(file: File, kind: Kind, onProgress: (loaded: number) => void): Promise<UploadResult> {
+export async function uploadFile(file: File, kind: Kind, onProgress: (loaded: number) => void): Promise<UploadResult> {
   const contentType = file.type || (kind === "media" ? guessMediaType(file.name) : "application/octet-stream");
   const start = await api<{ mode: "simple" | "multipart"; token?: string; part_size?: number; parts?: number }>("/admin/uploads/start", {
     method: "POST",
