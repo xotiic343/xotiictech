@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import type { AnimationEvent as RAnimationEvent, CSSProperties, MouseEvent as RMouseEvent } from "react";
+import type { AnimationEvent as RAnimationEvent, CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StockIcon } from "@/components/vendingx/StockIcon";
 
@@ -41,7 +41,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const short = (s: string) => s.toUpperCase().slice(0, 13);
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
 
-/** Layout position of el inside root. Ignores CSS transforms, so the machine's 3D tilt doesn't skew it. */
+/** Layout position of el inside root, ignoring CSS transforms such as the hover lift. */
 function offsetIn(el: HTMLElement, root: HTMLElement) {
   let x = 0;
   let y = 0;
@@ -96,8 +96,9 @@ type View = { sx: number; ty: number };
 const CARD_VIEW: View = { sx: -0.7, ty: 0.7 };
 
 function viewOf(col: number, row: number): View {
-  const mid = (COLS - 1) / 2;
-  return { sx: (col - mid) / mid, ty: (row + 0.4) / ROWS };
+  // The viewer stands a little right of the machine (its right side panel shows), so the
+  // vanishing point sits right of centre: most boxes show their right side.
+  return { sx: (col / (COLS - 1)) * 1.2 - 1, ty: (row + 0.4) / ROWS };
 }
 
 /** Transform that moves something `steps` boxes deeper into the machine: toward the centre, up, smaller. */
@@ -363,61 +364,15 @@ export default function VendingXPage() {
   const [thud, setThud] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
-  const stageRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
   const machineRef = useRef<HTMLDivElement>(null);
   const binRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const pkgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const reducedMotion = useRef(false);
-  const tilt = useRef({ base: -9, current: Number.NaN, follow: false, scrollingUntil: 0, frame: 0, pending: 0 });
-
-  /* ── 3D tilt: gentle left/right follow of the mouse, frozen while the page scrolls ── */
-
-  const applyTilt = useCallback((nx: number) => {
-    const t = tilt.current;
-    const el = bodyRef.current;
-    const ry = Math.round((t.base + nx * 4) * 4) / 4;
-    if (!el || ry === t.current) return;
-    t.current = ry;
-    el.style.transform = `rotateX(2.5deg) rotateY(${ry}deg)`;
-  }, []);
 
   useEffect(() => {
-    const t = tilt.current;
     reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    t.follow = !reducedMotion.current && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    t.base = window.innerWidth < 768 ? -4 : -9;
-    applyTilt(0);
-
-    let unfreeze: ReturnType<typeof setTimeout> | undefined;
-    const onScroll = () => {
-      t.scrollingUntil = performance.now() + 250;
-      stageRef.current?.setAttribute("data-scrolling", "");
-      clearTimeout(unfreeze);
-      unfreeze = setTimeout(() => stageRef.current?.removeAttribute("data-scrolling"), 250);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      clearTimeout(unfreeze);
-      cancelAnimationFrame(t.frame);
-    };
-  }, [applyTilt]);
-
-  function onStageMove(e: RMouseEvent<HTMLDivElement>) {
-    const t = tilt.current;
-    // Browsers fire mouse events while content scrolls under a still cursor; ignore those.
-    if (!t.follow || performance.now() < t.scrollingUntil) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    t.pending = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
-    if (!t.frame) {
-      t.frame = requestAnimationFrame(() => {
-        t.frame = 0;
-        applyTilt(t.pending);
-      });
-    }
-  }
+  }, []);
 
   /* ── Data ── */
 
@@ -801,52 +756,32 @@ export default function VendingXPage() {
       </div>
 
       <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-        {/* ─── Machine (3D stage) ─── */}
+        {/* ─── Machine ─── */}
         <div>
-          <div
-            ref={stageRef}
-            className="vx-stage mx-auto w-full max-w-[860px] pb-2 pt-6 md:pr-16"
-            style={{ perspective: "1800px", perspectiveOrigin: "50% 30%" }}
-            onMouseMove={onStageMove}
-            onMouseLeave={() => applyTilt(0)}
-          >
-            <div
-              ref={bodyRef}
-              className="vx-3d relative [--D:56px] md:[--D:120px]"
-              style={{
-                transform: "rotateX(2.5deg) rotateY(-9deg)",
-                transition: "transform .5s cubic-bezier(.2,.7,.3,1)",
-              }}
-            >
-              {/* Cabinet side and top (the machine's depth) */}
+          {/* No real 3D on the cabinet: Chrome redraws tilted 3D elements taller than the screen in
+              pieces while scrolling. Depth is drawn instead, as if you stand a little to the right. */}
+          <div className="mx-auto w-full max-w-[860px] pb-2 pr-[34px] pt-4 md:pr-[78px]">
+            <div className="relative [--D:34px] md:[--D:78px]">
+              {/* Cabinet side panel, receding to the right */}
               <div
                 aria-hidden
-                className="absolute bottom-[6px] left-full top-[6px] w-[var(--D)] origin-left overflow-hidden rounded-r-[14px]"
+                className="absolute bottom-0 left-full top-0 w-[var(--D)] overflow-hidden"
                 style={{
-                  transform: "rotateY(90deg)",
-                  background: "linear-gradient(90deg,#3e0808 0%,#200404 45%,#0c0101 100%)",
-                  boxShadow: "inset 2px 0 0 rgba(255,255,255,.1), inset -10px 0 30px rgba(0,0,0,.6)",
+                  clipPath: "polygon(0 0, 100% 3.5%, 100% 97.5%, 0 100%)",
+                  background: "linear-gradient(90deg,#430909 0%,#230404 40%,#0b0101 100%)",
                 }}
               >
                 <span className="absolute inset-0 opacity-[.06]" style={{ background: "repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)" }} />
-                <span className="absolute left-1/2 top-[18%] -translate-x-1/2 font-display text-[11px] font-black tracking-[0.6em] text-[#ff3030]/80 [writing-mode:vertical-rl] md:text-base">
+                <span className="absolute inset-y-0 left-0 w-[2px] bg-white/10" />
+                <span className="absolute left-1/2 top-[16%] -translate-x-1/2 font-display text-[9px] font-black tracking-[0.6em] text-[#ff3030]/75 [writing-mode:vertical-rl] md:text-sm">
                   VENDING X
                 </span>
-                <div className="absolute bottom-[10%] left-1/2 flex -translate-x-1/2 flex-col gap-1.5">
+                <div className="absolute bottom-[9%] left-1/2 flex -translate-x-1/2 flex-col gap-1.5">
                   {Array.from({ length: 8 }, (_, i) => (
-                    <span key={i} className="h-[3px] w-6 rounded-full bg-black/70 md:w-12" />
+                    <span key={i} className="h-[3px] w-4 rounded-full bg-black/70 md:w-9" />
                   ))}
                 </div>
               </div>
-              <div
-                aria-hidden
-                className="absolute bottom-full left-[6px] right-[6px] h-[var(--D)] origin-bottom rounded-t-[14px]"
-                style={{
-                  transform: "rotateX(90deg)",
-                  background: "linear-gradient(0deg,#3a0707,#120202)",
-                  boxShadow: "inset 0 -2px 0 rgba(255,255,255,.12)",
-                }}
-              />
 
               {/* Front of the machine */}
               <div
@@ -950,8 +885,6 @@ export default function VendingXPage() {
                       <div
                         className="relative z-10 overflow-hidden rounded-[7px] pb-3 pt-6 sm:pb-4 sm:pt-8"
                         style={{
-                          perspective: "760px",
-                          perspectiveOrigin: "50% 35%",
                           background: "radial-gradient(90% 55% at 50% 30%, #2a0d0d 0%, #0d0505 60%, #050202 100%)",
                           boxShadow: "inset 0 0 0 2px #040404, inset 0 18px 30px rgba(0,0,0,.8), inset 0 -24px 34px rgba(0,0,0,.85)",
                         }}
@@ -985,7 +918,7 @@ export default function VendingXPage() {
                         {/* Shelf rack: turns like a drum between pages */}
                         <div
                           className={`relative space-y-1.5 sm:space-y-2.5 ${flipClass}`}
-                          style={{ transformOrigin: "50% 50% -170px" }}
+                          style={{ transformOrigin: "50% 50%" }}
                           onAnimationEnd={onRackAnimationEnd}
                         >
                           {LETTERS.map((row, r) => {
@@ -1384,8 +1317,6 @@ export default function VendingXPage() {
       </div>
 
       <style>{`
-        .vx-3d { transform-style: preserve-3d; }
-        .vx-stage[data-scrolling] { pointer-events: none; }
         @keyframes vxCoilTurn { to { stroke-dashoffset: -182; } }
         .vx-coil-turn { animation: vxCoilTurn .55s linear infinite; }
         @keyframes vxSign { 0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; } 20%, 63% { opacity: .55; } }
@@ -1408,10 +1339,10 @@ export default function VendingXPage() {
         .vx-ready { animation: vxReady 1.3s ease-in-out infinite; }
         @keyframes vxCaret { 50% { opacity: 0; } }
         .vx-caret { animation: vxCaret 1s step-end infinite; }
-        @keyframes vxFlipOutNext { to { transform: rotateY(-90deg); } }
-        @keyframes vxFlipInNext { from { transform: rotateY(90deg); } to { transform: rotateY(0deg); } }
-        @keyframes vxFlipOutPrev { to { transform: rotateY(90deg); } }
-        @keyframes vxFlipInPrev { from { transform: rotateY(-90deg); } to { transform: rotateY(0deg); } }
+        @keyframes vxFlipOutNext { to { transform: translateX(-45%) scaleX(.08); filter: brightness(.3); } }
+        @keyframes vxFlipInNext { from { transform: translateX(45%) scaleX(.08); filter: brightness(.3); } to { transform: none; filter: none; } }
+        @keyframes vxFlipOutPrev { to { transform: translateX(45%) scaleX(.08); filter: brightness(.3); } }
+        @keyframes vxFlipInPrev { from { transform: translateX(-45%) scaleX(.08); filter: brightness(.3); } to { transform: none; filter: none; } }
         .vx-flip-out-next { animation: vxFlipOutNext .26s cubic-bezier(.5,0,1,.6) forwards; }
         .vx-flip-in-next { animation: vxFlipInNext .36s cubic-bezier(.1,.6,.3,1.15) both; }
         .vx-flip-out-prev { animation: vxFlipOutPrev .26s cubic-bezier(.5,0,1,.6) forwards; }
