@@ -540,12 +540,12 @@ class VendingCog(commands.Cog):
         view.add_item(discord.ui.Button(
             label="Buy Premium — $3",
             style=discord.ButtonStyle.danger,
-            url=f"{FRONTEND_URL}/vendingx/checkout/premium",
+            url=f"{FRONTEND_URL}/store/vendingx-premium",
         ))
         view.add_item(discord.ui.Button(
             label="Buy Bot Access — $50",
             style=discord.ButtonStyle.secondary,
-            url=f"{FRONTEND_URL}/vendingx/checkout/bot-access",
+            url=f"{FRONTEND_URL}/store/vendingx-bot-access",
         ))
 
         await channel.send(embed=embed, view=view)

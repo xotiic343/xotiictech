@@ -130,7 +130,7 @@ def build_premium_embed() -> discord.Embed:
         title="🔴  PREMIUM VENDING — LIVE STOCK",
         description=(
             "> Exclusive items for premium members.\n"
-            "> Get access: `$3` at [xotiictech.net/vendingx](" + FRONTEND_URL + "/vendingx)\n"
+            "> Get access: `$3` at [xotiictech.net/store/vendingx-premium](" + FRONTEND_URL + "/store/vendingx-premium)\n"
             "───────────────────────────────────"
         ),
         color=0x8B0000,
@@ -264,7 +264,7 @@ class PersonalVendView(View):
                 description=(
                     f"This is a **Premium** item. You need one of:\n"
                     f"• <@&{access.PREMIUM_ROLE_ID}> role\n"
-                    f"• [$3 one-time]({FRONTEND_URL}/vendingx) on the site\n"
+                    f"• [$3 one-time]({FRONTEND_URL}/store/vendingx-premium) on the site\n"
                     f"• Server boost\n\n"
                     f"**Beta Vending** items are free for everyone!"
                 ),
@@ -444,7 +444,7 @@ class VendingMachineView(View):
                 description=(
                     f"This is a **Premium** item. You need one of:\n"
                     f"• <@&{access.PREMIUM_ROLE_ID}> role\n"
-                    f"• [$3 one-time]({FRONTEND_URL}/vendingx) on the site\n"
+                    f"• [$3 one-time]({FRONTEND_URL}/store/vendingx-premium) on the site\n"
                     f"• Server boost\n\n"
                     f"**Beta Vending** items are free for everyone!"
                 ),
