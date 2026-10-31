@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import type { AnimationEvent as RAnimationEvent, MouseEvent as RMouseEvent } from "react";
+import type { AnimationEvent as RAnimationEvent, CSSProperties, MouseEvent as RMouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StockIcon } from "@/components/vendingx/StockIcon";
 
@@ -88,26 +88,55 @@ function Screw({ className }: { className: string }) {
   );
 }
 
-/* ── 3D product box: front, top and both sides. Depth comes from --d on an ancestor. ── */
+/* ── Products are drawn flat in perspective: no 3D layers, so the page stays smooth and nothing can
+   paint over anything else. A View says where a slot sits relative to the eye: sx runs -1 (far left)
+   to 1 (far right), ty from 0 (eye level) to 1 (far below). Depth comes from --d on an ancestor. ── */
 
-function Box({ item, sides = true }: { item: Pick<Item, "key" | "name" | "icon" | "premium">; sides?: boolean }) {
+type View = { sx: number; ty: number };
+const CARD_VIEW: View = { sx: -0.7, ty: 0.7 };
+
+function viewOf(col: number, row: number): View {
+  const mid = (COLS - 1) / 2;
+  return { sx: (col - mid) / mid, ty: (row + 0.4) / ROWS };
+}
+
+/** Transform that moves something `steps` boxes deeper into the machine: toward the centre, up, smaller. */
+function deeper(v: View, steps: number) {
+  const dx = -v.sx * 0.6 * steps;
+  const dy = -(v.ty * 0.8 + 0.15) * steps;
+  return `translate(calc(var(--d) * ${dx.toFixed(3)}), calc(var(--d) * ${dy.toFixed(3)})) scale(${(1 - 0.06 * steps).toFixed(3)})`;
+}
+
+function Box({ item, view, sides = true }: { item: Pick<Item, "key" | "name" | "icon" | "premium">; view: View; sides?: boolean }) {
   const prem = item.premium;
-  const side = prem ? "linear-gradient(180deg,#5a0b0b,#1c0202)" : "linear-gradient(180deg,#2c2e34,#0c0c0e)";
+  const sideBg = prem ? "linear-gradient(180deg,#5a0b0b,#1c0202)" : "linear-gradient(180deg,#2c2e34,#0c0c0e)";
+  const topBg = prem ? "linear-gradient(0deg,#8a1818,#420707)" : "linear-gradient(0deg,#5a5d64,#222328)";
+  const sideW = Math.abs(view.sx) * 0.8;
+  const topH = view.ty * 0.75;
+  const rightSide = view.sx <= 0; // left of centre, so the box's right side faces you
   return (
-    <div className="vx-3d relative h-full w-full">
-      <span
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-[var(--d)] origin-top"
-        style={{
-          transform: "rotateX(-90deg)",
-          background: prem ? "linear-gradient(0deg,#8a1818,#420707)" : "linear-gradient(0deg,#55585f,#202126)",
-        }}
-      />
-      {sides && (
-        <>
-          <span aria-hidden className="absolute inset-y-0 left-0 w-[var(--d)] origin-left" style={{ transform: "rotateY(90deg)", background: side }} />
-          <span aria-hidden className="absolute inset-y-0 right-0 w-[var(--d)] origin-right" style={{ transform: "rotateY(-90deg)", background: side }} />
-        </>
+    <div className="relative h-full w-full">
+      {topH > 0.04 && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-full origin-bottom"
+          style={{
+            height: `calc(var(--d) * ${topH.toFixed(3)})`,
+            transform: `skewX(${(view.sx * 38).toFixed(1)}deg)`,
+            background: topBg,
+          }}
+        />
+      )}
+      {sides && sideW > 0.04 && (
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 ${rightSide ? "left-full origin-left" : "right-full origin-right"}`}
+          style={{
+            width: `calc(var(--d) * ${sideW.toFixed(3)})`,
+            transform: `skewY(${((rightSide ? -1 : 1) * (view.ty * 40 + 6)).toFixed(1)}deg)`,
+            background: sideBg,
+          }}
+        />
       )}
       <div
         className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-[3px] px-0.5 pb-0.5 pt-1.5 sm:px-1 sm:pb-1 sm:pt-2"
@@ -140,19 +169,19 @@ function Box({ item, sides = true }: { item: Pick<Item, "key" | "name" | "icon" 
   );
 }
 
-/** Spiral coil: rings stepping back into the machine. Spinning runs the wire around each ring. */
-function Coil({ spinning, dim }: { spinning: boolean; dim: boolean }) {
+/** Spiral coil loops stepping back into the machine. The front loop is drawn over the front box, the
+    rest behind it. Spinning runs the wire around each loop. */
+function CoilLoops({ view, part, spinning, dim }: { view: View; part: "back" | "front"; spinning: boolean; dim: boolean }) {
+  const loops = part === "front" ? [0] : [3, 2, 1];
   return (
-    <div
-      aria-hidden
-      className="vx-3d pointer-events-none absolute -bottom-[2px] left-1/2 h-[38px] w-[38px] -translate-x-1/2 sm:-bottom-[4px] sm:h-[60px] sm:w-[60px]"
-    >
-      {[0, 1, 2, 3].map((i) => (
+    <>
+      {loops.map((i) => (
         <svg
           key={i}
           viewBox="0 0 64 64"
-          className="absolute inset-0 h-full w-full"
-          style={{ transform: `translateZ(calc(4px - ${i} * (var(--d) + 6px)))` }}
+          aria-hidden
+          className="pointer-events-none absolute -bottom-[3px] left-1/2 h-[38px] w-[38px] sm:-bottom-[5px] sm:h-[60px] sm:w-[60px]"
+          style={{ transform: `translateX(-50%) ${deeper(view, i * 0.9)}` }}
         >
           <circle
             cx="32"
@@ -169,13 +198,14 @@ function Coil({ spinning, dim }: { spinning: boolean; dim: boolean }) {
           />
         </svg>
       ))}
-    </div>
+    </>
   );
 }
 
 function Slot({
   item,
   code,
+  view,
   selected,
   spinning,
   advance,
@@ -185,6 +215,7 @@ function Slot({
 }: {
   item?: Item;
   code: string;
+  view: View;
   selected: boolean;
   spinning: boolean;
   advance: number;
@@ -194,6 +225,7 @@ function Slot({
 }) {
   const count = item?.count ?? 0;
   const copies = item ? Math.min(count, 3) : 0;
+  const advanceFrom = { "--from": deeper(view, 1) } as CSSProperties;
   return (
     <button
       type="button"
@@ -201,41 +233,36 @@ function Slot({
       disabled={disabled}
       aria-label={item ? `${code}: ${item.name}, ${count ? `${count} left` : "sold out"}` : `${code}: empty`}
       aria-pressed={selected}
-      className="vx-3d group relative flex h-[66px] items-end justify-center outline-none sm:h-[100px]"
+      className="group relative flex h-[66px] items-end justify-center outline-none sm:h-[100px]"
     >
       {selected && (
         <span
           aria-hidden
           className="vx-select absolute inset-x-0 bottom-2 top-1 rounded-lg"
-          style={{
-            transform: "translateZ(-46px)",
-            background: "radial-gradient(60% 60% at 50% 65%, rgba(255,40,40,.55), transparent 70%)",
-          }}
+          style={{ background: "radial-gradient(60% 60% at 50% 65%, rgba(255,40,40,.5), transparent 70%)" }}
         />
       )}
-      <div className={`vx-3d relative mb-[3px] sm:mb-[5px] ${BOX}`}>
-        {Array.from({ length: copies }, (_, i) => copies - 1 - i).map((i) =>
-          i === 0 ? (
-            <div
-              key={`front-${advance}`}
-              ref={pkgRef}
-              className={`vx-3d absolute inset-0 transition-transform duration-200 group-hover:[transform:translate3d(0,-3px,8px)] ${
-                selected ? "[transform:translate3d(0,-3px,8px)]" : ""
-              } ${advance ? "vx-advance" : ""}`}
-            >
-              {item && <Box item={item} />}
+      <div className={`relative mb-[3px] sm:mb-[5px] ${BOX}`}>
+        <CoilLoops view={view} part="back" spinning={spinning} dim={!copies} />
+        {item &&
+          Array.from({ length: Math.max(copies - 1, 0) }, (_, k) => copies - 1 - k).map((i) => (
+            <div key={i} className="absolute inset-0" style={{ transform: deeper(view, i), filter: `brightness(${1 - 0.25 * i})` }}>
+              <Box item={item} view={view} sides={false} />
             </div>
-          ) : (
-            <div
-              key={i}
-              className="vx-3d absolute inset-0"
-              style={{ transform: `translateZ(calc(${i} * (var(--d) + 6px) * -1))` }}
-            >
-              {item && <Box item={item} sides={false} />}
-            </div>
-          ),
+          ))}
+        {item && copies > 0 && (
+          <div
+            key={`front-${advance}`}
+            ref={pkgRef}
+            className={`absolute inset-0 transition-transform duration-200 group-hover:-translate-y-[3px] ${selected ? "-translate-y-[3px]" : ""} ${
+              advance ? "vx-advance" : ""
+            }`}
+            style={advanceFrom}
+          >
+            <Box item={item} view={view} />
+          </div>
         )}
-        <Coil spinning={spinning} dim={!copies} />
+        <CoilLoops view={view} part="front" spinning={spinning} dim={!copies} />
       </div>
       {item && count === 0 && (
         <span className="absolute bottom-[38%] font-display text-[6px] tracking-[0.2em] text-red-500/80 sm:text-[8px]">SOLD OUT</span>
@@ -249,7 +276,6 @@ function Rail({ codes, bySlot, selected }: { codes: string[]; bySlot: Record<str
     <div
       className="relative mx-0.5 grid h-[15px] grid-cols-6 gap-0.5 rounded-[2px] px-1 sm:h-[18px] sm:gap-1 sm:px-2"
       style={{
-        transform: "translateZ(10px)",
         background: "linear-gradient(180deg,#62656e 0%,#2a2b30 32%,#111215 100%)",
         boxShadow: "inset 0 1px 0 rgba(255,255,255,.25), 0 8px 12px rgba(0,0,0,.8)",
       }}
@@ -790,7 +816,6 @@ export default function VendingXPage() {
               style={{
                 transform: "rotateX(2.5deg) rotateY(-9deg)",
                 transition: "transform .5s cubic-bezier(.2,.7,.3,1)",
-                willChange: "transform",
               }}
             >
               {/* Cabinet side and top (the machine's depth) */}
@@ -921,7 +946,7 @@ export default function VendingXPage() {
                         boxShadow: "0 0 0 1px #000, inset 0 1px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.5)",
                       }}
                     >
-                      {/* Cabinet interior, rendered in real perspective */}
+                      {/* Cabinet interior: side walls and ceiling drawn as trapezoids receding to the back */}
                       <div
                         className="relative z-10 overflow-hidden rounded-[7px] pb-3 pt-6 sm:pb-4 sm:pt-8"
                         style={{
@@ -933,18 +958,18 @@ export default function VendingXPage() {
                       >
                         <span
                           aria-hidden
-                          className="absolute inset-y-0 left-0 w-[160px] origin-left"
-                          style={{ transform: "rotateY(90deg)", background: "linear-gradient(90deg,#2c0d0d,#0a0303)" }}
+                          className="absolute inset-y-0 left-0 w-[7%]"
+                          style={{ clipPath: "polygon(0 0, 100% 5%, 100% 95%, 0 100%)", background: "linear-gradient(90deg,#2e0e0e,#0c0404)" }}
                         />
                         <span
                           aria-hidden
-                          className="absolute inset-y-0 right-0 w-[160px] origin-right"
-                          style={{ transform: "rotateY(-90deg)", background: "linear-gradient(270deg,#2c0d0d,#0a0303)" }}
+                          className="absolute inset-y-0 right-0 w-[7%]"
+                          style={{ clipPath: "polygon(0 5%, 100% 0, 100% 100%, 0 95%)", background: "linear-gradient(270deg,#2e0e0e,#0c0404)" }}
                         />
                         <span
                           aria-hidden
-                          className="absolute inset-x-0 top-0 h-[160px] origin-top"
-                          style={{ transform: "rotateX(-90deg)", background: "linear-gradient(180deg,#3a1212,#0a0303)" }}
+                          className="absolute inset-x-0 top-0 h-6 sm:h-8"
+                          style={{ clipPath: "polygon(0 0, 100% 0, 93% 100%, 7% 100%)", background: "linear-gradient(180deg,#3a1212,#0c0404)" }}
                         />
                         <span
                           aria-hidden
@@ -959,29 +984,33 @@ export default function VendingXPage() {
 
                         {/* Shelf rack: turns like a drum between pages */}
                         <div
-                          className={`vx-3d relative space-y-1.5 sm:space-y-2.5 ${flipClass}`}
+                          className={`relative space-y-1.5 sm:space-y-2.5 ${flipClass}`}
                           style={{ transformOrigin: "50% 50% -170px" }}
                           onAnimationEnd={onRackAnimationEnd}
                         >
-                          {LETTERS.map((row) => {
+                          {LETTERS.map((row, r) => {
                             const codes = DIGITS.map((d) => `${row}${d}`);
+                            const floorDepth = viewOf(0, r).ty * 2.2;
                             return (
-                              <div key={row} className="vx-3d relative">
+                              <div key={row} className="relative">
+                                {/* Shelf surface you can see from above */}
                                 <div
                                   aria-hidden
-                                  className="absolute inset-x-1 bottom-[15px] h-[90px] origin-bottom sm:bottom-[18px]"
+                                  className="pointer-events-none absolute inset-x-1 bottom-[15px] sm:bottom-[18px]"
                                   style={{
-                                    transform: "translateZ(10px) rotateX(90deg)",
-                                    background: "linear-gradient(0deg,#4a4c53 0%,#1b1c20 18%,#0a0a0c 100%)",
+                                    height: `calc(var(--d) * ${floorDepth.toFixed(2)} + 2px)`,
+                                    clipPath: "polygon(0 100%, 100% 100%, 94% 0, 6% 0)",
+                                    background: "linear-gradient(0deg,#4a4c53 0%,#1b1c20 45%,#0d0d10 100%)",
                                   }}
                                 />
-                                <div className="vx-3d grid grid-cols-6 gap-0.5 px-1 sm:gap-1 sm:px-2">
-                                  {codes.map((code) => {
+                                <div className="grid grid-cols-6 gap-0.5 px-1 sm:gap-1 sm:px-2">
+                                  {codes.map((code, c) => {
                                     const it = bySlot[code];
                                     return (
                                       <Slot
                                         key={code}
                                         code={code}
+                                        view={viewOf(c, r)}
                                         item={it}
                                         selected={selected === code}
                                         spinning={spinningSlot === code}
@@ -1229,8 +1258,8 @@ export default function VendingXPage() {
                     className="pointer-events-none absolute z-20"
                     style={{ left: drop.x, top: drop.y, width: drop.w, height: drop.h, perspective: "600px" }}
                   >
-                    <div ref={dropRef} className="vx-3d h-full w-full">
-                      <Box item={drop.item} />
+                    <div ref={dropRef} className="h-full w-full">
+                      <Box item={drop.item} view={viewOf(Number(drop.item.slot.slice(1)) - 1, LETTERS.indexOf(drop.item.slot[0]))} />
                     </div>
                   </div>
                 )}
@@ -1249,9 +1278,9 @@ export default function VendingXPage() {
                         aria-label={`${prize.item.name} dispensed`}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="shrink-0 pl-1" style={{ perspective: "400px" }}>
-                            <div className={`vx-3d vx-spin-slow ${BOX}`}>
-                              <Box item={prize.item} />
+                          <div className="shrink-0 pb-1 pr-3 pt-3">
+                            <div className={BOX}>
+                              <Box item={prize.item} view={CARD_VIEW} />
                             </div>
                           </div>
                           <div className="min-w-0">
@@ -1367,7 +1396,7 @@ export default function VendingXPage() {
         .vx-sheen { animation: vxSheen 9s ease-in-out infinite; }
         @keyframes vxSelect { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
         .vx-select { animation: vxSelect 1.4s ease-in-out infinite; }
-        @keyframes vxAdvance { from { transform: translateZ(calc((var(--d) + 6px) * -1)); } to { transform: translateZ(0); } }
+        @keyframes vxAdvance { from { transform: var(--from); filter: brightness(.75); } to { transform: none; filter: none; } }
         .vx-advance { animation: vxAdvance .7s .3s cubic-bezier(.3,1.3,.6,1) both; }
         @keyframes vxThud { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(3px); } 60% { transform: translateY(-1px); } }
         .vx-thud { animation: vxThud .26s ease-out; }
@@ -1379,8 +1408,6 @@ export default function VendingXPage() {
         .vx-ready { animation: vxReady 1.3s ease-in-out infinite; }
         @keyframes vxCaret { 50% { opacity: 0; } }
         .vx-caret { animation: vxCaret 1s step-end infinite; }
-        @keyframes vxSpinSlow { from { transform: rotateY(-35deg) rotateX(12deg); } 50% { transform: rotateY(35deg) rotateX(12deg); } to { transform: rotateY(-35deg) rotateX(12deg); } }
-        .vx-spin-slow { animation: vxSpinSlow 5s ease-in-out infinite; }
         @keyframes vxFlipOutNext { to { transform: rotateY(-90deg); } }
         @keyframes vxFlipInNext { from { transform: rotateY(90deg); } to { transform: rotateY(0deg); } }
         @keyframes vxFlipOutPrev { to { transform: rotateY(90deg); } }
@@ -1391,7 +1418,7 @@ export default function VendingXPage() {
         .vx-flip-in-prev { animation: vxFlipInPrev .36s cubic-bezier(.1,.6,.3,1.15) both; }
         @media (prefers-reduced-motion: reduce) {
           .vx-coil-turn, .vx-sign, .vx-led-strip, .vx-sheen, .vx-select, .vx-advance, .vx-thud, .vx-hum, .vx-push,
-          .vx-ready, .vx-caret, .vx-spin-slow { animation: none; }
+          .vx-ready, .vx-caret { animation: none; }
         }
       `}</style>
     </section>
