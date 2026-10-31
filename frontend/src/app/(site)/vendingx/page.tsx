@@ -90,7 +90,7 @@ function Screw({ className }: { className: string }) {
 
 /* ── 3D product box: front, top and both sides. Depth comes from --d on an ancestor. ── */
 
-function Box({ item }: { item: Pick<Item, "key" | "name" | "icon" | "premium"> }) {
+function Box({ item, sides = true }: { item: Pick<Item, "key" | "name" | "icon" | "premium">; sides?: boolean }) {
   const prem = item.premium;
   const side = prem ? "linear-gradient(180deg,#5a0b0b,#1c0202)" : "linear-gradient(180deg,#2c2e34,#0c0c0e)";
   return (
@@ -103,8 +103,12 @@ function Box({ item }: { item: Pick<Item, "key" | "name" | "icon" | "premium"> }
           background: prem ? "linear-gradient(0deg,#8a1818,#420707)" : "linear-gradient(0deg,#55585f,#202126)",
         }}
       />
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[var(--d)] origin-left" style={{ transform: "rotateY(90deg)", background: side }} />
-      <span aria-hidden className="absolute inset-y-0 right-0 w-[var(--d)] origin-right" style={{ transform: "rotateY(-90deg)", background: side }} />
+      {sides && (
+        <>
+          <span aria-hidden className="absolute inset-y-0 left-0 w-[var(--d)] origin-left" style={{ transform: "rotateY(90deg)", background: side }} />
+          <span aria-hidden className="absolute inset-y-0 right-0 w-[var(--d)] origin-right" style={{ transform: "rotateY(-90deg)", background: side }} />
+        </>
+      )}
       <div
         className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden rounded-[3px] px-0.5 pb-0.5 pt-1.5 sm:px-1 sm:pb-1 sm:pt-2"
         style={{
@@ -141,7 +145,7 @@ function Coil({ spinning, dim }: { spinning: boolean; dim: boolean }) {
   return (
     <div
       aria-hidden
-      className="vx-3d pointer-events-none absolute -bottom-[5px] left-1/2 h-[38px] w-[38px] -translate-x-1/2 sm:-bottom-[7px] sm:h-[60px] sm:w-[60px]"
+      className="vx-3d pointer-events-none absolute -bottom-[2px] left-1/2 h-[38px] w-[38px] -translate-x-1/2 sm:-bottom-[4px] sm:h-[60px] sm:w-[60px]"
     >
       {[0, 1, 2, 3].map((i) => (
         <svg
@@ -202,7 +206,7 @@ function Slot({
       {selected && (
         <span
           aria-hidden
-          className="vx-select absolute inset-x-0 bottom-0 top-1 rounded-lg"
+          className="vx-select absolute inset-x-0 bottom-2 top-1 rounded-lg"
           style={{
             transform: "translateZ(-46px)",
             background: "radial-gradient(60% 60% at 50% 65%, rgba(255,40,40,.55), transparent 70%)",
@@ -227,7 +231,7 @@ function Slot({
               className="vx-3d absolute inset-0"
               style={{ transform: `translateZ(calc(${i} * (var(--d) + 6px) * -1))` }}
             >
-              {item && <Box item={item} />}
+              {item && <Box item={item} sides={false} />}
             </div>
           ),
         )}
@@ -333,32 +337,60 @@ export default function VendingXPage() {
   const [thud, setThud] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
+  const stageRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const machineRef = useRef<HTMLDivElement>(null);
   const binRef = useRef<HTMLDivElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const pkgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const reducedMotion = useRef(false);
-  const baseTilt = useRef(-9);
+  const tilt = useRef({ base: -9, current: Number.NaN, follow: false, scrollingUntil: 0, frame: 0, pending: 0 });
 
-  /* ── 3D tilt that follows the mouse ── */
+  /* ── 3D tilt: gentle left/right follow of the mouse, frozen while the page scrolls ── */
 
-  const applyTilt = useCallback((nx: number, ny: number) => {
+  const applyTilt = useCallback((nx: number) => {
+    const t = tilt.current;
     const el = bodyRef.current;
-    if (!el) return;
-    el.style.transform = `rotateX(${(2.5 - ny * 3.5).toFixed(2)}deg) rotateY(${(baseTilt.current + nx * 6).toFixed(2)}deg)`;
+    const ry = Math.round((t.base + nx * 4) * 4) / 4;
+    if (!el || ry === t.current) return;
+    t.current = ry;
+    el.style.transform = `rotateX(2.5deg) rotateY(${ry}deg)`;
   }, []);
 
   useEffect(() => {
+    const t = tilt.current;
     reducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    baseTilt.current = window.innerWidth < 768 ? -4 : -10;
-    applyTilt(0, 0);
+    t.follow = !reducedMotion.current && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    t.base = window.innerWidth < 768 ? -4 : -9;
+    applyTilt(0);
+
+    let unfreeze: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      t.scrollingUntil = performance.now() + 250;
+      stageRef.current?.setAttribute("data-scrolling", "");
+      clearTimeout(unfreeze);
+      unfreeze = setTimeout(() => stageRef.current?.removeAttribute("data-scrolling"), 250);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(unfreeze);
+      cancelAnimationFrame(t.frame);
+    };
   }, [applyTilt]);
 
   function onStageMove(e: RMouseEvent<HTMLDivElement>) {
-    if (reducedMotion.current) return;
+    const t = tilt.current;
+    // Browsers fire mouse events while content scrolls under a still cursor; ignore those.
+    if (!t.follow || performance.now() < t.scrollingUntil) return;
     const r = e.currentTarget.getBoundingClientRect();
-    applyTilt(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+    t.pending = clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1);
+    if (!t.frame) {
+      t.frame = requestAnimationFrame(() => {
+        t.frame = 0;
+        applyTilt(t.pending);
+      });
+    }
   }
 
   /* ── Data ── */
@@ -746,15 +778,20 @@ export default function VendingXPage() {
         {/* ─── Machine (3D stage) ─── */}
         <div>
           <div
-            className="mx-auto w-full max-w-[860px] pb-2 pt-6 md:pr-16"
+            ref={stageRef}
+            className="vx-stage mx-auto w-full max-w-[860px] pb-2 pt-6 md:pr-16"
             style={{ perspective: "1800px", perspectiveOrigin: "50% 30%" }}
             onMouseMove={onStageMove}
-            onMouseLeave={() => applyTilt(0, 0)}
+            onMouseLeave={() => applyTilt(0)}
           >
             <div
               ref={bodyRef}
               className="vx-3d relative [--D:56px] md:[--D:120px]"
-              style={{ transform: "rotateX(2.5deg) rotateY(-9deg)", transition: "transform .35s cubic-bezier(.2,.7,.3,1)" }}
+              style={{
+                transform: "rotateX(2.5deg) rotateY(-9deg)",
+                transition: "transform .5s cubic-bezier(.2,.7,.3,1)",
+                willChange: "transform",
+              }}
             >
               {/* Cabinet side and top (the machine's depth) */}
               <div
@@ -984,7 +1021,7 @@ export default function VendingXPage() {
 
                       {/* Locked premium shelf */}
                       {locked && (
-                        <div className="absolute inset-[6px] z-[26] grid place-items-center rounded-[7px] bg-black/60 p-6 text-center backdrop-blur-[2px]">
+                        <div className="absolute inset-[6px] z-[26] grid place-items-center rounded-[7px] bg-black/75 p-6 text-center">
                           <div className="max-w-xs">
                             <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full border border-blood/60 bg-blood/10 text-blood shadow-[0_0_30px_rgba(255,0,0,.25)]">
                               <LockGlyph className="h-6 w-6" />
@@ -1207,7 +1244,7 @@ export default function VendingXPage() {
                         animate={{ y: 0, opacity: 1, scale: 1 }}
                         exit={{ y: 40, opacity: 0, scale: 0.96 }}
                         transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                        className="w-full max-w-md border border-blood/60 bg-black/95 p-4 shadow-[0_0_40px_rgba(255,0,0,.25)] backdrop-blur"
+                        className="w-full max-w-md border border-blood/60 bg-black/95 p-4 shadow-[0_0_40px_rgba(255,0,0,.25)]"
                         role="dialog"
                         aria-label={`${prize.item.name} dispensed`}
                       >
@@ -1319,6 +1356,7 @@ export default function VendingXPage() {
 
       <style>{`
         .vx-3d { transform-style: preserve-3d; }
+        .vx-stage[data-scrolling] { pointer-events: none; }
         @keyframes vxCoilTurn { to { stroke-dashoffset: -182; } }
         .vx-coil-turn { animation: vxCoilTurn .55s linear infinite; }
         @keyframes vxSign { 0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; } 20%, 63% { opacity: .55; } }
